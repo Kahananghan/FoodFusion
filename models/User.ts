@@ -19,9 +19,10 @@ const UserSchema = new mongoose.Schema({
   address: AddressSchema,
   role: { 
     type: String, 
-    enum: ['customer', 'restaurant', 'admin'], 
+    enum: ['customer', 'restaurant', 'admin', 'delivery'], 
     default: 'customer' 
-  }
+  },
+  isActive: { type: Boolean, default: true }
 }, {
   timestamps: true
 })

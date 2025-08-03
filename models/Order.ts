@@ -28,6 +28,8 @@ const OrderSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'failed'],
     default: 'pending'
   },
+  deliveryPersonId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  deliveryFee: { type: Number, default: 5 },
   estimatedDeliveryTime: Date
 }, {
   timestamps: true

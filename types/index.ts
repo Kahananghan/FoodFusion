@@ -4,7 +4,8 @@ export interface User {
   email: string
   phone?: string
   address?: Address
-  role: 'customer' | 'restaurant' | 'admin'
+  role: 'customer' | 'restaurant' | 'admin' | 'delivery'
+  isActive: boolean
   createdAt: Date
 }
 
@@ -32,6 +33,7 @@ export interface Restaurant {
   address: Address
   menu: MenuItem[]
   isOpen: boolean
+  status: 'pending' | 'approved' | 'rejected'
   owner: string
 }
 
@@ -64,6 +66,8 @@ export interface Order {
   deliveryAddress: Address
   status: 'pending' | 'confirmed' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled'
   paymentStatus: 'pending' | 'paid' | 'failed'
+  deliveryPersonId?: string
+  deliveryFee: number
   createdAt: Date
   estimatedDeliveryTime: Date
 }

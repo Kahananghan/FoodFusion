@@ -31,6 +31,11 @@ const RestaurantSchema = new mongoose.Schema({
   },
   menu: [MenuItemSchema],
   isOpen: { type: Boolean, default: true },
+  status: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected'], 
+    default: 'pending' 
+  },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, {
   timestamps: true
