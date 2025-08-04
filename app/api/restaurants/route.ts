@@ -9,8 +9,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const cuisine = searchParams.get('cuisine')
     const search = searchParams.get('search')
+    const city = searchParams.get('city')
+    const state = searchParams.get('state')
+    const zipCode = searchParams.get('zipCode')
     
-    let query: any = {}
+    let query: any = { status: 'approved', isOpen: true }
     
     if (cuisine) {
       query.cuisine = { $in: [cuisine] }
@@ -21,6 +24,18 @@ export async function GET(request: NextRequest) {
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
       ]
+    }
+    
+    if (city) {
+      query['address.city'] = { $regex: city, $options: 'i' }
+    }
+    
+    if (state) {
+      query['address.state'] = { $regex: state, $options: 'i' }
+    }
+    
+    if (zipCode) {
+      query['address.zipCode'] = zipCode
     }
     
     const restaurants = await Restaurant.find(query).populate('owner', 'name email')

@@ -122,15 +122,6 @@ export default function Login() {
             </Link>
           </p>
         </div>
-
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="text-center text-sm text-gray-500">
-            <p>Demo Accounts:</p>
-            <p>Admin: admin@demo.com / password</p>
-            <p>Restaurant: seller@demo.com / password</p>
-            <p>Delivery: delivery@demo.com / password</p>
-          </div>
-        </div>
       </div>
     </div>
   )
