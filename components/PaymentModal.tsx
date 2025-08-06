@@ -65,7 +65,7 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Amount</span>
-              <span className="text-2xl font-bold text-primary">${totalAmount.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-primary">₹{totalAmount}</span>
             </div>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
               ) : (
                 <>
                   <Lock className="h-4 w-4 mr-2" />
-                  Pay ${totalAmount.toFixed(2)}
+                  Pay ₹{totalAmount}
                 </>
               )}
             </button>
@@ -183,7 +183,7 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
             disabled={loading}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {loading ? 'Processing...' : `Pay with PayPal - $${totalAmount.toFixed(2)}`}
+            {loading ? 'Processing...' : `Pay with PayPal - ₹${totalAmount}`}
           </button>
         )}
 

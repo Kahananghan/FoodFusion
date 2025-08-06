@@ -35,6 +35,8 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<{[key: string]: number}>({})
   const [loading, setLoading] = useState(true)
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [orders, setOrders] = useState<any[]>([])
 
   useEffect(() => {
     fetchRestaurant()
@@ -42,72 +44,46 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }, [params.id])
 
   const fetchRestaurant = async () => {
-    console.log('Fetching restaurant with ID:', params.id)
     try {
       const response = await fetch(`/api/restaurants/${params.id}`)
-      console.log('Response status:', response.status)
       if (response.ok) {
         const data = await response.json()
-        console.log('Restaurant data:', data)
         setRestaurant(data)
       } else {
-        console.log('API failed, using fallback')
-        setRestaurant({
-          id: params.id,
-          name: 'Restaurant Name',
-          cuisines: 'Multi Cuisine',
-          user_rating: { aggregate_rating: '4.5', rating_text: 'Very Good' },
-          location: { address: 'Address', locality: 'Locality', city: 'City' },
-          featured_image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&h=400&fit=crop',
-          average_cost_for_two: 1500,
-          currency: '₹'
-        })
+        // Fallback: try to find restaurant from all restaurants
+        const allResponse = await fetch('/api/restaurants')
+        if (allResponse.ok) {
+          const allData = await allResponse.json()
+          const foundRestaurant = allData.restaurants.find((r: any) => r.id === params.id)
+          if (foundRestaurant) {
+            setRestaurant(foundRestaurant)
+          }
+        }
       }
     } catch (error) {
-      console.log('Fetch error:', error)
-      setRestaurant({
-        id: params.id,
-        name: 'Restaurant Name',
-        cuisines: 'Multi Cuisine',
-        user_rating: { aggregate_rating: '4.5', rating_text: 'Very Good' },
-        location: { address: 'Address', locality: 'Locality', city: 'City' },
-        featured_image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&h=400&fit=crop',
-        average_cost_for_two: 1500,
-        currency: '₹'
-      })
+      console.error('Error fetching restaurant:', error)
     }
   }
 
   const fetchMenu = async () => {
-    try {
-      const response = await fetch(`/api/restaurants/${params.id}/menu`)
-      if (response.ok) {
-        const data = await response.json()
-        setMenuItems(data)
-      } else {
-        // Fallback to mock menu
-        setMenuItems([
-          {
-            id: '1',
-            name: 'Special Dish',
-            description: 'House special with fresh ingredients',
-            price: 350,
-            image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
-          }
-        ])
+    // Force fallback menu with both items
+    const fallbackMenu = [
+      {
+        id: '1',
+        name: 'Special Dish',
+        description: 'House special with fresh ingredients',
+        price: 350,
+        image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
+      },
+      {
+        id: '2',
+        name: 'Gujarati Dish',
+        description: 'Gujarati special with fresh ingredients',
+        price: 250,
+        image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
       }
-    } catch (error) {
-      // Fallback to mock menu
-      setMenuItems([
-        {
-          id: '1',
-          name: 'Special Dish',
-          description: 'House special with fresh ingredients',
-          price: 350,
-          image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
-        }
-      ])
-    }
+    ]
+    setMenuItems(fallbackMenu)
     setLoading(false)
   }
 
@@ -119,10 +95,77 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   const removeFromCart = (itemId: string) => {
-    setCart(prev => ({
-      ...prev,
-      [itemId]: Math.max((prev[itemId] || 0) - 1, 0)
-    }))
+    setCart(prev => {
+      const newCount = Math.max((prev[itemId] || 0) - 1, 0)
+      const newCart = { ...prev }
+      if (newCount === 0) {
+        delete newCart[itemId]
+      } else {
+        newCart[itemId] = newCount
+      }
+      return newCart
+    })
+  }
+
+  const handleCheckout = async () => {
+    if (getTotalItems() === 0) return
+    
+    setIsCheckingOut(true)
+    try {
+      // Prepare order data for database
+      const orderData = {
+        user: '507f1f77bcf86cd799439011', // Valid ObjectId format
+        restaurant: '507f1f77bcf86cd799439012', // Valid ObjectId format  
+        items: Array.isArray(menuItems) ? menuItems.filter(item => cart[item.id] > 0).map(item => ({
+          menuItem: {
+            name: item.name,
+            price: item.price,
+            image: item.image || ''
+          },
+          quantity: cart[item.id]
+        })) : [],
+        totalAmount: getTotalPrice() + 40,
+        deliveryAddress: {
+          street: '123 Main St',
+          city: 'Mumbai', 
+          state: 'Maharashtra',
+          zipCode: '400001'
+        },
+        status: 'confirmed',
+        deliveryFee: 40
+      }
+      
+      // Save to database
+      console.log('Sending order data:', orderData)
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      })
+      
+      let orderId = Date.now().toString()
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Order saved to database:', result)
+        orderId = result.order._id
+      } else {
+        const errorData = await response.text()
+        console.error('Database save failed:', response.status, errorData)
+        throw new Error('Failed to save order')
+      }
+      
+      setCart({})
+      
+      alert(`Order placed successfully! Order ID: ${orderId}`)
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert('Checkout failed. Please try again.')
+    } finally {
+      setIsCheckingOut(false)
+    }
   }
 
   const getTotalItems = () => {
@@ -130,6 +173,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   const getTotalPrice = () => {
+    if (!Array.isArray(menuItems)) return 0
     return menuItems.reduce((total, item) => {
       return total + (item.price * (cart[item.id] || 0))
     }, 0)
@@ -166,8 +210,8 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center mb-2">
-                    <Star className="h-5 w-5 text-yellow-400 mr-1" />
-                    <span className="font-semibold">{restaurant.user_rating.aggregate_rating}</span>
+                    <Star className="h-5 w-5 text-yellow-400 mr-2" />
+                    <span className="font-semibold text-yellow-500 ">{restaurant.user_rating.aggregate_rating}</span>
                     <span className="text-gray-600 ml-2">{restaurant.user_rating.rating_text}</span>
                   </div>
                   <p className="text-gray-600 flex items-center">
@@ -183,7 +227,8 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
 
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
-                <h2 className="text-2xl font-bold mb-6">Menu</h2>
+                <h2 className="text-2xl font-bold mb-6 text-black">Menu</h2>
+                <p className="text-sm text-gray-500 mb-4">Total items: {menuItems.length}</p>
                 <div className="space-y-4">
                   {menuItems.map((item) => (
                     <div key={item.id} className="bg-white rounded-lg shadow-md p-4 flex">
@@ -195,7 +240,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         className="rounded-lg object-cover"
                       />
                       <div className="ml-4 flex-1">
-                        <h3 className="text-lg font-semibold">{item.name}</h3>
+                        <h3 className="text-lg font-semibold text-black">{item.name}</h3>
                         <p className="text-gray-600 text-sm mb-2">{item.description}</p>
                         <p className="text-lg font-bold text-primary">₹{item.price}</p>
                       </div>
@@ -204,14 +249,14 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => removeFromCart(item.id)}
-                              className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center"
+                              className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                             >
                               <Minus className="h-4 w-4" />
                             </button>
-                            <span className="font-semibold">{cart[item.id]}</span>
+                            <span className="font-semibold text-primary min-w-[20px] text-center">{cart[item.id]}</span>
                             <button
                               onClick={() => addToCart(item.id)}
-                              className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center"
+                              className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
                             >
                               <Plus className="h-4 w-4" />
                             </button>
@@ -219,7 +264,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         ) : (
                           <button
                             onClick={() => addToCart(item.id)}
-                            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600"
+                            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 transition-colors"
                           >
                             Add
                           </button>
@@ -230,12 +275,12 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {getTotalItems() > 0 && (
-                <div className="lg:col-span-1">
-                  <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
+              <div className="lg:col-span-1">
+                {getTotalItems() > 0 && (
+                  <div className="bg-white rounded-lg shadow-md p-6 sticky top-4 mb-6">
                     <h3 className="text-xl font-bold mb-4">Cart ({getTotalItems()} items)</h3>
                     <div className="space-y-2 mb-4">
-                      {menuItems.filter(item => cart[item.id] > 0).map(item => (
+                      {Array.isArray(menuItems) && menuItems.filter(item => cart[item.id] > 0).map(item => (
                         <div key={item.id} className="flex justify-between">
                           <span>{item.name} x {cart[item.id]}</span>
                           <span>₹{item.price * cart[item.id]}</span>
@@ -243,17 +288,31 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                       ))}
                     </div>
                     <div className="border-t pt-4">
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total</span>
+                      <div className="flex justify-between font-bold text-lg mb-2">
+                        <span>Subtotal</span>
                         <span>₹{getTotalPrice()}</span>
                       </div>
-                      <button className="w-full mt-4 bg-primary text-white py-3 rounded-lg hover:bg-orange-600">
-                        Proceed to Checkout
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span>Delivery Fee</span>
+                        <span>₹40</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xl border-t pt-2">
+                        <span>Total</span>
+                        <span>₹{getTotalPrice() + 40}</span>
+                      </div>
+                      <button 
+                        onClick={handleCheckout}
+                        disabled={isCheckingOut || getTotalItems() === 0}
+                        className="w-full mt-4 bg-primary text-white py-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isCheckingOut ? 'Processing...' : `Checkout ₹${getTotalPrice() + 40}`}
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+                
+
+              </div>
             </div>
             </div>
           </>

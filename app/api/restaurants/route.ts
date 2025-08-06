@@ -1,47 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { datasetAPI } from '@/lib/dataset'
 import dbConnect from '@/lib/mongodb'
-import Restaurant from '@/models/Restaurant'
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect()
-    
     const { searchParams } = new URL(request.url)
     const cuisine = searchParams.get('cuisine')
     const search = searchParams.get('search')
     const city = searchParams.get('city')
-    const state = searchParams.get('state')
-    const zipCode = searchParams.get('zipCode')
+    const limit = searchParams.get('limit')
     
-    let query: any = { status: 'approved', isOpen: true }
-    
-    if (cuisine) {
-      query.cuisine = { $in: [cuisine] }
-    }
-    
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ]
-    }
-    
-    if (city) {
-      query['address.city'] = { $regex: city, $options: 'i' }
-    }
-    
-    if (state) {
-      query['address.state'] = { $regex: state, $options: 'i' }
-    }
-    
-    if (zipCode) {
-      query['address.zipCode'] = zipCode
-    }
-    
-    const restaurants = await Restaurant.find(query).populate('owner', 'name email')
-    
+    const restaurants = datasetAPI.getRestaurants({
+      cuisine: cuisine || undefined,
+      search: search || undefined,
+      city: city || undefined,
+      limit: limit ? parseInt(limit) : undefined
+    })
+
     return NextResponse.json({ restaurants })
   } catch (error) {
+    console.error('Error in restaurants API:', error)
     return NextResponse.json({ error: 'Failed to fetch restaurants' }, { status: 500 })
   }
 }

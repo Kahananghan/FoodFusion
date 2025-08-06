@@ -25,12 +25,32 @@ export default function CartPage() {
   })
 
   useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage.getItem('cart')
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart))
-    }
+    fetchCartFromOrders()
   }, [])
+
+  const fetchCartFromOrders = async () => {
+    try {
+      const response = await fetch('/api/orders')
+      if (response.ok) {
+        const data = await response.json()
+        // Get the latest order and convert its items to cart format
+        if (data.orders && data.orders.length > 0) {
+          const latestOrder = data.orders[0]
+          const cartItems = latestOrder.items.map((item: any) => ({
+            id: item.menuItem?.name || Date.now().toString(),
+            name: item.menuItem?.name || 'Item',
+            price: item.menuItem?.price || 0,
+            quantity: item.quantity || 1,
+            image: item.menuItem?.image || '',
+            restaurant: 'Restaurant'
+          }))
+          setCartItems(cartItems)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching cart from orders:', error)
+    }
+  }
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -38,53 +58,65 @@ export default function CartPage() {
       return
     }
 
+    if (!Array.isArray(cartItems)) return
     const updatedItems = cartItems.map(item =>
       item.id === id ? { ...item, quantity: newQuantity } : item
     )
     setCartItems(updatedItems)
-    localStorage.setItem('cart', JSON.stringify(updatedItems))
   }
 
   const removeItem = (id: string) => {
+    if (!Array.isArray(cartItems)) return
     const updatedItems = cartItems.filter(item => item.id !== id)
     setCartItems(updatedItems)
-    localStorage.setItem('cart', JSON.stringify(updatedItems))
     toast.success('Item removed from cart')
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const deliveryFee = 5.99
-  const tax = subtotal * 0.08
-  const total = subtotal + deliveryFee + tax
+  const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) : 0
+  const deliveryFee = 40
+  const total = subtotal + deliveryFee
 
   const handlePaymentSuccess = async (paymentData: any) => {
     try {
       const orderData = {
-        items: cartItems,
+        user: '507f1f77bcf86cd799439011',
+        restaurant: '507f1f77bcf86cd799439012',
+        items: cartItems.map(item => ({
+          menuItem: {
+            name: item.name,
+            price: item.price,
+            image: item.image
+          },
+          quantity: item.quantity
+        })),
         totalAmount: total,
         deliveryAddress,
-        paymentData
+        status: 'confirmed',
+        deliveryFee: deliveryFee
       }
 
-      const res = await fetch('/api/orders', {
+      // Save order to database
+      const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(orderData)
       })
 
-      if (res.ok) {
+      if (response.ok) {
+        // Clear cart
         setCartItems([])
-        localStorage.removeItem('cart')
         toast.success('Order placed successfully!')
       } else {
-        toast.error('Failed to place order')
+        throw new Error('Failed to place order')
       }
     } catch (error) {
       toast.error('Something went wrong')
     }
   }
 
-  if (cartItems.length === 0) {
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4">
@@ -124,7 +156,7 @@ export default function CartPage() {
               </div>
               
               <div className="divide-y divide-gray-200">
-                {cartItems.map((item) => (
+                {Array.isArray(cartItems) && cartItems.map((item) => (
                   <div key={item.id} className="p-6 flex items-center space-x-4">
                     <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                       {item.image ? (
@@ -137,20 +169,20 @@ export default function CartPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{item.name}</h3>
                       <p className="text-gray-600 text-sm">{item.restaurant}</p>
-                      <p className="text-primary font-bold">${item.price.toFixed(2)}</p>
+                      <p className="text-primary font-bold">₹{item.price}</p>
                     </div>
                     
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                        className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center hover:bg-gray-200"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
-                      <span className="font-semibold">{item.quantity}</span>
+                      <span className="font-semibold text-gray-600">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                        className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center hover:bg-gray-200"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
@@ -217,34 +249,33 @@ export default function CartPage() {
               </div>
               
               <div className="p-6 space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span className="font-semibold">₹{subtotal}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery Fee</span>
-                  <span className="font-semibold">${deliveryFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-semibold">${tax.toFixed(2)}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span >Delivery Fee</span>
+                  <span className="font-semibold">₹{deliveryFee}</span>
                 </div>
                 <div className="border-t pt-4">
                   <div className="flex justify-between">
-                    <span className="text-lg font-bold">Total</span>
-                    <span className="text-lg font-bold text-primary">${total.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-black">Total</span>
+                    <span className="text-lg font-bold text-primary">₹{total}</span>
                   </div>
                 </div>
                 
                 <button
-                  onClick={() => setShowPaymentModal(true)}
+                  onClick={() => {
+                    console.log('Payment button clicked', { showPaymentModal, deliveryAddress })
+                    setShowPaymentModal(true)
+                  }}
                   disabled={!deliveryAddress.street || !deliveryAddress.city}
-                  className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 >
                   Proceed to Payment
                 </button>
                 
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-gray-500 text-center mt-4">
                   By placing your order, you agree to our Terms of Service and Privacy Policy.
                 </p>
               </div>

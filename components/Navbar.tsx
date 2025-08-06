@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ShoppingCart, User, Search, LogOut, Settings } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import NotificationSystem from './NotificationSystem'
@@ -10,8 +10,40 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function Navbar() {
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
   const { user, logout: authLogout } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    const updateCartCount = async () => {
+      try {
+        const response = await fetch('/api/orders')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.orders && data.orders.length > 0) {
+            const latestOrder = data.orders[0]
+            const count = latestOrder.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) || 0
+            setCartCount(count)
+          } else {
+            setCartCount(0)
+          }
+        } else {
+          setCartCount(0)
+        }
+      } catch {
+        setCartCount(0)
+      }
+    }
+
+    updateCartCount()
+    
+    // Update cart count every 30 seconds
+    const interval = setInterval(updateCartCount, 30000)
+    
+    return () => {
+      clearInterval(interval)
+    }
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -59,7 +91,7 @@ export default function Navbar() {
               <Link href="/cart" className="relative">
                 <ShoppingCart className="h-6 w-6 text-gray-600" />
                 <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  0
+                  {cartCount}
                 </span>
               </Link>
             )}
