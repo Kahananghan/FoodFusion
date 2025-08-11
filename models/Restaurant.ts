@@ -36,7 +36,13 @@ const RestaurantSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'], 
     default: 'pending' 
   },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  
+  // Additional admin fields
+  totalOrders: { type: Number, default: 0 },
+  revenue: { type: Number, default: 0 },
+  averageRating: { type: Number, default: 0 },
+  totalReviews: { type: Number, default: 0 }
 }, {
   timestamps: true
 })

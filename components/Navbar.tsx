@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { ShoppingCart, User, Search, LogOut, Settings } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import toast from 'react-hot-toast'
 import NotificationSystem from './NotificationSystem'
 import { useAuth } from '@/contexts/AuthContext'
@@ -13,6 +13,12 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0)
   const { user, logout: authLogout } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Don't render navbar on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
 
   useEffect(() => {
     const updateCartCount = async () => {
