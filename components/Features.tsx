@@ -29,12 +29,15 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="py-20 bg-white">
+    <section className="py-24 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Us?</h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We're committed to delivering not just food, but an exceptional experience every time.
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
+            ✨ Why Choose Us
+          </div>
+          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">Exceptional Service</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            We're committed to delivering not just food, but an exceptional experience that exceeds your expectations every single time.
           </p>
         </div>
         
@@ -42,13 +45,18 @@ export default function Features() {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="group p-8 rounded-2xl border border-gray-100 hover:border-primary/20 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+              className="group p-10 rounded-3xl bg-white border border-gray-100 hover:border-primary/30 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-4 relative overflow-hidden"
             >
-              <div className={`w-16 h-16 ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                <feature.icon className="h-8 w-8" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              <div className={`w-20 h-20 ${feature.color} rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 relative z-10`}>
+                <feature.icon className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+              
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-primary transition-colors duration-300 relative z-10">{feature.title}</h3>
+              <p className="text-gray-600 leading-relaxed text-lg relative z-10">{feature.description}</p>
+              
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
           ))}
         </div>
