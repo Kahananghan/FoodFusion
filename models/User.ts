@@ -1,22 +1,26 @@
 import mongoose from 'mongoose'
 
 const AddressSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
   street: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
   zipCode: { type: String, required: true },
+  landmark: String,
+  type: { type: String, enum: ['home', 'office', 'other'], default: 'home' },
   coordinates: {
     lat: Number,
     lng: Number
   }
-})
+}, { timestamps: true })
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: String,
-  address: AddressSchema,
+  addresses: [AddressSchema],
   role: { 
     type: String, 
     enum: ['customer', 'restaurant', 'admin', 'delivery'], 

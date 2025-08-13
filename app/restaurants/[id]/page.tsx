@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Star, MapPin, Plus, Minus } from 'lucide-react'
+import { addToCart as addToCartDB } from '@/utils/cart'
+import toast from 'react-hot-toast'
 
 interface MenuItem {
   id: string
@@ -87,11 +89,34 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
     setLoading(false)
   }
 
-  const addToCart = (itemId: string) => {
-    setCart(prev => ({
-      ...prev,
-      [itemId]: (prev[itemId] || 0) + 1
-    }))
+  const addToCart = async (itemId: string) => {
+    const item = menuItems.find(m => m.id === itemId)
+    if (!item) return
+
+    try {
+      const success = await addToCartDB({
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        image: item.image,
+        restaurant: restaurant?.name || 'Restaurant'
+      })
+
+      if (success) {
+        setCart(prev => ({
+          ...prev,
+          [itemId]: (prev[itemId] || 0) + 1
+        }))
+        window.dispatchEvent(new Event('cartUpdated'))
+      }
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || error.status === 401) {
+        toast.error('Please login to add items to cart')
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 1500)
+      }
+    }
   }
 
   const removeFromCart = (itemId: string) => {
@@ -228,7 +253,6 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
                 <h2 className="text-2xl font-bold mb-6 text-black">Menu</h2>
-                <p className="text-sm text-gray-500 mb-4">Total items: {menuItems.length}</p>
                 <div className="space-y-4">
                   {menuItems.map((item) => (
                     <div key={item.id} className="bg-white rounded-lg shadow-md p-4 flex">
@@ -266,7 +290,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                             onClick={() => addToCart(item.id)}
                             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 transition-colors"
                           >
-                            Add
+                            Add to Cart
                           </button>
                         )}
                       </div>
@@ -300,13 +324,12 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         <span>Total</span>
                         <span>₹{getTotalPrice() + 40}</span>
                       </div>
-                      <button 
-                        onClick={handleCheckout}
-                        disabled={isCheckingOut || getTotalItems() === 0}
-                        className="w-full mt-4 bg-primary text-white py-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      <a 
+                        href="/cart"
+                        className="w-full mt-4 bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition-colors block text-center"
                       >
-                        {isCheckingOut ? 'Processing...' : `Checkout ₹${getTotalPrice() + 40}`}
-                      </button>
+                        Go to Cart
+                      </a>
                     </div>
                   </div>
                 )}

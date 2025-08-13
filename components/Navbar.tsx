@@ -8,9 +8,29 @@ import toast from 'react-hot-toast'
 import NotificationSystem from './NotificationSystem'
 import { useAuth } from '@/contexts/AuthContext'
 
+// Add custom CSS for animations
+const styles = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+  .animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+  }
+`
+
 export default function Navbar() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [cartCount, setCartCount] = useState(0)
   const { user, logout: authLogout } = useAuth()
   const router = useRouter()
@@ -24,12 +44,11 @@ export default function Navbar() {
   useEffect(() => {
     const updateCartCount = async () => {
       try {
-        const response = await fetch('/api/orders')
+        const response = await fetch('/api/cart')
         if (response.ok) {
           const data = await response.json()
-          if (data.orders && data.orders.length > 0) {
-            const latestOrder = data.orders[0]
-            const count = latestOrder.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) || 0
+          if (data.success && data.cartItems) {
+            const count = data.cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
             setCartCount(count)
           } else {
             setCartCount(0)
@@ -44,11 +63,12 @@ export default function Navbar() {
 
     updateCartCount()
     
-    // Update cart count every 30 seconds
-    const interval = setInterval(updateCartCount, 30000)
+    // Listen for cart updates
+    const handleCartUpdate = () => updateCartCount()
+    window.addEventListener('cartUpdated', handleCartUpdate)
     
     return () => {
-      clearInterval(interval)
+      window.removeEventListener('cartUpdated', handleCartUpdate)
     }
   }, [])
 
@@ -77,6 +97,7 @@ export default function Navbar() {
 
   return (
     <>
+      <style jsx global>{styles}</style>
       {/* Top Bar */}
       <div className="bg-gray-900 text-white py-2 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -129,15 +150,15 @@ export default function Navbar() {
                   My Orders
                 </Link>
               )}
-              <Link href="/about" className={`text-gray-700 hover:text-primary font-medium transition-colors ${pathname === '/about' ? 'text-primary' : ''}`}>
-                About
-              </Link>
             </div>
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
               {/* Search - Desktop Only */}
-              <button className="hidden md:block p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-lg transition-all">
+              <button 
+                onClick={() => setShowSearch(true)}
+                className="hidden md:block p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-lg transition-all"
+              >
                 <Search className="h-5 w-5" />
               </button>
               
@@ -227,7 +248,10 @@ export default function Navbar() {
             <div className="px-4 py-4 space-y-3">
               {/* Mobile Action Icons */}
               <div className="flex items-center justify-around py-4 border-b border-gray-200">
-                <button className="flex flex-col items-center space-y-1 text-gray-600 hover:text-primary">
+                <button 
+                  onClick={() => setShowSearch(true)}
+                  className="flex flex-col items-center space-y-1 text-gray-600 hover:text-primary"
+                >
                   <Search className="h-6 w-6" />
                   <span className="text-xs font-medium">Search</span>
                 </button>
@@ -266,9 +290,6 @@ export default function Navbar() {
                   My Orders
                 </Link>
               )}
-              <Link href="/about" className="block py-2 text-gray-700 hover:text-primary font-medium" onClick={() => setShowMobileMenu(false)}>
-                About
-              </Link>
               
               {!user && (
                 <div className="pt-4 border-t border-gray-200 space-y-3">
@@ -292,6 +313,100 @@ export default function Navbar() {
           </div>
         )}
       </nav>
+      
+      {/* Search Modal */}
+      {showSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-start justify-center pt-16 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 transform animate-slideDown">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Search className="h-5 w-5 text-primary" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search restaurants, cuisines, dishes..."
+                  className="flex-1 outline text-lg px-3 py-2 bg-white text-black rounded-full"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      router.push(`/restaurants?search=${encodeURIComponent(searchQuery.trim())}`)
+                      setShowSearch(false)
+                      setSearchQuery('')
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  onClick={() => {
+                    setShowSearch(false)
+                    setSearchQuery('')
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Search Results */}
+            {searchQuery.trim() && (
+              <div className="p-4">
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      router.push(`/restaurants?search=${encodeURIComponent(searchQuery.trim())}`)
+                      setShowSearch(false)
+                      setSearchQuery('')
+                    }}
+                    className="w-full text-left p-4 hover:bg-gradient-to-r hover:from-primary/5 hover:to-orange-50 rounded-xl flex items-center space-x-4 transition-all group border border-transparent hover:border-primary/20"
+                  >
+                    <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                      <Search className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Search for "{searchQuery}"</p>
+                      <p className="text-sm text-gray-500">Find restaurants and dishes</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Quick Suggestions */}
+            {!searchQuery.trim() && (
+              <div className="p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Popular Searches</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['Pizza', 'Burger', 'Chinese', 'Indian', 'Italian'].map((term) => (
+                    <button
+                      key={term}
+                      onClick={() => {
+                        router.push(`/restaurants?search=${encodeURIComponent(term)}`)
+                        setShowSearch(false)
+                        setSearchQuery('')
+                      }}
+                      className="px-4 py-2 bg-gray-800 hover:bg-primary/10 hover:text-primary rounded-full text-sm font-medium transition-all"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-b-2xl">
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>💡 Tip: Try searching for cuisines or restaurant names</span>
+                <span className="text-xs bg-white px-2 py-1 rounded-md font-medium">Press Enter ↵</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

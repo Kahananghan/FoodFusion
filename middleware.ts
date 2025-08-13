@@ -1,53 +1,54 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { jwtVerify } from 'jose'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   const { pathname } = request.nextUrl
 
-  console.log('Middleware - Path:', pathname)
-  console.log('Middleware - Token exists:', !!token)
-
   // Protected routes
-  const protectedRoutes = ['/admin', '/seller', '/delivery', '/profile', '/orders']
+  const protectedRoutes = ['/admin', '/seller', '/delivery', '/profile', '/orders', '/cart']
   const authRoutes = ['/login', '/register']
+  
+  // Protected API routes that require authentication
+  const protectedApiRoutes = ['/api/orders', '/api/cart', '/api/addresses']
+  
 
   // Check if route is protected
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  const isProtectedApiRoute = protectedApiRoutes.some(route => pathname.startsWith(route))
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
-  if (isProtectedRoute && !token) {
+  if ((isProtectedRoute || isProtectedApiRoute) && !token) {
     console.log('Middleware - No token, redirecting to login')
+    if (isProtectedApiRoute) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Skip auth route redirect - let frontend handle it
-  // if (isAuthRoute && token) {
-  //   return NextResponse.redirect(new URL('/', request.url))
-  // }
+  
+  if (isAuthRoute && token) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
 
   // Role-based access control
   if (token && isProtectedRoute) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-      const userRole = decoded.role
-      console.log('Middleware - User role:', userRole)
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
+      const { payload } = await jwtVerify(token, secret)
+      const userRole = payload.role as string
 
       if (pathname.startsWith('/admin') && userRole !== 'admin') {
-        console.log('Middleware - Not admin, redirecting to home')
         return NextResponse.redirect(new URL('/', request.url))
       }
       if (pathname.startsWith('/seller') && userRole !== 'restaurant') {
-        console.log('Middleware - Not restaurant, redirecting to home')
         return NextResponse.redirect(new URL('/', request.url))
       }
       if (pathname.startsWith('/delivery') && userRole !== 'delivery') {
-        console.log('Middleware - Not delivery, redirecting to home')
         return NextResponse.redirect(new URL('/', request.url))
       }
       
-      console.log('Middleware - Access granted')
     } catch (error) {
       console.log('Middleware - Token verification failed:', error)
       return NextResponse.redirect(new URL('/login', request.url))
@@ -58,5 +59,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: []
+  matcher: ['/admin/:path*', '/seller/:path*', '/delivery/:path*', '/profile/:path*', '/orders/:path*', '/cart/:path*', '/api/orders/:path*', '/api/cart/:path*', '/api/addresses/:path*']
 }

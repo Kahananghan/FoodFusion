@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import jwt from 'jsonwebtoken'
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
     
-    const orders = await Order.find({})
+    const token = request.cookies.get('token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+    const userId = decoded.userId
+    
+    const orders = await Order.find({ user: userId })
       .sort({ createdAt: -1 })
       .lean()
     
     return NextResponse.json({ orders })
   } catch (error) {
     console.error('Database error:', error)
-    // Return empty array instead of error to avoid 500
     return NextResponse.json({ orders: [] })
   }
 }
@@ -25,11 +33,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('Received order data:', body)
     
+    // Calculate subtotal from items
+    const subtotal = (body.items || []).reduce((sum: number, item: any) => {
+      return sum + ((item.menuItem?.price || 0) * (item.quantity || 1))
+    }, 0)
+    
+    // Apply delivery fee logic: free above ₹500
+    const deliveryFee = subtotal >= 500 ? 0 : 40
+    const totalAmount = subtotal + deliveryFee
+    
+    const token = request.cookies.get('token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+    const userId = decoded.userId
+    
     const orderData = {
-      user: body.user || '507f1f77bcf86cd799439011', // Default user ID
+      user: userId,
       restaurant: body.restaurant,
       items: body.items || [],
-      totalAmount: body.totalAmount || 0,
+      totalAmount,
       deliveryAddress: body.deliveryAddress || {
         street: 'Default Street',
         city: 'Mumbai',
@@ -37,7 +62,7 @@ export async function POST(request: NextRequest) {
         zipCode: '400001'
       },
       status: body.status || 'confirmed',
-      deliveryFee: body.deliveryFee || 40,
+      deliveryFee,
       estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
     }
     
@@ -48,6 +73,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ order: savedOrder }, { status: 201 })
   } catch (error) {
     console.error('Order save error:', error)
-    return NextResponse.json({ error: 'Failed to create order', details: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create order'}, { status: 500 })
   }
 }

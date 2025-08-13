@@ -35,19 +35,24 @@ export default function OrdersPage() {
       if (response.ok) {
         const data = await response.json()  
         const dbOrders = data.orders.map((order: any) => {
+          const items = (order.items || []).map((item: any) => ({
+            name: item.menuItem?.name || 'Item',
+            quantity: item.quantity || 1,
+            price: item.menuItem?.price || 0,
+            total: (item.menuItem?.price || 0) * (item.quantity || 1)
+          }))
+          
+          const subtotal = items.reduce((sum, item) => sum + item.total, 0)
+          const deliveryFee = subtotal >= 500 ? 0 : 40
+          
           return {
             id: order._id,
             restaurantId: order.restaurant,
             restaurantName: 'Restaurant',
-            items: (order.items || []).map((item: any) => ({
-              name: item.menuItem?.name || 'Item',
-              quantity: item.quantity || 1,
-              price: item.menuItem?.price || 0,
-              total: (item.menuItem?.price || 0) * (item.quantity || 1)
-            })),
-            subtotal: (order.totalAmount || 0) - (order.deliveryFee || 40),
-            deliveryFee: order.deliveryFee || 40,
-            total: order.totalAmount || 0,
+            items,
+            subtotal,
+            deliveryFee,
+            total: subtotal + deliveryFee,
             status: order.status || 'confirmed',
             orderDate: order.createdAt || new Date().toISOString()
           }
@@ -118,12 +123,23 @@ export default function OrdersPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Delivery Fee</span>
-                      <span>₹{order.deliveryFee}</span>
+                      <span>
+                        {order.deliveryFee === 0 ? (
+                          <span className="text-green-600 font-medium">FREE</span>
+                        ) : (
+                          `₹${order.deliveryFee}`
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center font-semibold border-t pt-2 mt-2">
                       <span>Total</span>
                       <span>₹{order.total}</span>
                     </div>
+                    {order.subtotal >= 500 && (
+                      <div className="text-sm text-green-600 font-medium mt-1">
+                        🎉 Free delivery applied!
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

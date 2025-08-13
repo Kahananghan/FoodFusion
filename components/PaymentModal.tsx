@@ -74,7 +74,7 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Payment Method
           </label>
-          <div className="space-y-2">
+          <div className="space-y-2 text-gray-700">
             <label className="flex items-center">
               <input
                 type="radio"
