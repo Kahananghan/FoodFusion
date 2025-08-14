@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     await dbConnect()
     
     const body = await request.json()
-    console.log('Received order data:', body)
     
     // Calculate subtotal from items
     const subtotal = (body.items || []).reduce((sum: number, item: any) => {

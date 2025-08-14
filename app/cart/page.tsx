@@ -191,7 +191,7 @@ export default function CartPage() {
         status: 'confirmed',
         deliveryFee: deliveryFee
       }
-
+    
       // Save order to database
       const response = await fetch('/api/orders', {
         method: 'POST',

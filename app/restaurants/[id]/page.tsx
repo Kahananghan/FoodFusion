@@ -213,85 +213,99 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {restaurant && (
         <>
-          <div className="relative h-64">
+          <div className="relative h-80">
             <Image
               src={restaurant.featured_image}
               alt={restaurant.name}
               fill
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-black bg-opacity-40" />
-            <div className="absolute bottom-4 left-4 text-white">
-              <h1 className="text-3xl font-bold">{restaurant.name}</h1>
-              <p className="text-lg">{restaurant.cuisines}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20" />
+            <div className="absolute bottom-6 left-6 text-white">
+              <h1 className="text-4xl font-bold mb-2 drop-shadow-lg">{restaurant.name}</h1>
+              <p className="text-xl opacity-90 drop-shadow">{restaurant.cuisines}</p>
             </div>
           </div>
 
           <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex items-center mb-2">
-                    <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                    <span className="font-semibold text-yellow-500 ">{restaurant.user_rating.aggregate_rating}</span>
-                    <span className="text-gray-600 ml-2">{restaurant.user_rating.rating_text}</span>
+                  <div className="flex items-center mb-3">
+                    <div className="bg-yellow-50 p-2 rounded-full mr-3">
+                      <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                    </div>
+                    <span className="font-bold text-xl text-yellow-600">{restaurant.user_rating.aggregate_rating}</span>
+                    <span className="text-gray-600 ml-3 text-lg">{restaurant.user_rating.rating_text}</span>
                   </div>
-                  <p className="text-gray-600 flex items-center">
-                    <MapPin className="h-4 w-4 mr-1" />
+                  <p className="text-gray-600 flex items-center text-lg">
+                    <MapPin className="h-5 w-5 mr-2 text-primary" />
                     {restaurant.location.locality}, {restaurant.location.city}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold">{restaurant.currency}{restaurant.average_cost_for_two} for two</p>
+                <div className="text-right bg-primary/10 p-4 rounded-lg">
+                  <p className="text-2xl font-bold text-primary">{restaurant.currency}{restaurant.average_cost_for_two}</p>
+                  <p className="text-gray-600">for two</p>
                 </div>
               </div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
-                <h2 className="text-2xl font-bold mb-6 text-black">Menu</h2>
-                <div className="space-y-4">
+                <div className="flex items-center mb-8">
+                  <h2 className="text-3xl font-bold text-gray-800">Menu</h2>
+                  <div className="ml-4 h-1 flex-1 bg-gradient-to-r from-primary to-transparent rounded"></div>
+                </div>
+                <div className="space-y-6">
                   {menuItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-lg shadow-md p-4 flex">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        width={120}
-                        height={80}
-                        className="rounded-lg object-cover"
-                      />
-                      <div className="ml-4 flex-1">
-                        <h3 className="text-lg font-semibold text-black">{item.name}</h3>
-                        <p className="text-gray-600 text-sm mb-2">{item.description}</p>
-                        <p className="text-lg font-bold text-primary">₹{item.price}</p>
+                    <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 flex border border-gray-100">
+                      <div className="relative">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={140}
+                          height={100}
+                          className="rounded-xl object-cover shadow-md"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
                       </div>
-                      <div className="flex items-center">
+                      <div className="ml-6 flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">{item.name}</h3>
+                        <p className="text-gray-600 mb-3 leading-relaxed">{item.description}</p>
+                        <div className="flex items-center">
+                          <span className="text-2xl font-bold text-primary">₹{item.price}</span>
+                          <div className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Popular</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center ml-4">
                         {cart[item.id] > 0 ? (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-2">
                             <button
                               onClick={() => removeFromCart(item.id)}
-                              className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                              className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                               <Minus className="h-4 w-4" />
                             </button>
-                            <span className="font-semibold text-primary min-w-[20px] text-center">{cart[item.id]}</span>
+                            <span className="font-bold text-primary text-lg min-w-[30px] text-center">{cart[item.id]}</span>
                             <button
                               onClick={() => addToCart(item.id)}
-                              className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
+                              className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => addToCart(item.id)}
-                            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 transition-colors"
-                          >
-                            Add to Cart
-                          </button>
+                          <div className="text-right">
+                            <button
+                              onClick={() => addToCart(item.id)}
+                              className="px-6 py-3 bg-gradient-to-r from-primary to-orange-500 text-white rounded-xl font-semibold hover:from-orange-500 hover:to-primary transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            >
+                              Add to Cart
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -301,40 +315,43 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
 
               <div className="lg:col-span-1">
                 {getTotalItems() > 0 && (
-                  <div className="bg-white rounded-lg shadow-md p-6 sticky top-4 mb-6">
-                    <h3 className="text-xl font-bold mb-4">Cart ({getTotalItems()} items)</h3>
-                    <div className="space-y-2 mb-4">
+                  <div className="bg-white rounded-xl shadow-xl p-6 sticky top-4 border border-gray-100">
+                    <div className="flex items-center mb-6">
+                      <div className="bg-primary/10 p-2 rounded-full mr-3">
+                        <div className="w-4 h-4 bg-primary rounded-full"></div>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-800">Cart ({getTotalItems()} items)</h3>
+                    </div>
+                    <div className="space-y-3 mb-6">
                       {Array.isArray(menuItems) && menuItems.filter(item => cart[item.id] > 0).map(item => (
-                        <div key={item.id} className="flex justify-between">
-                          <span>{item.name} x {cart[item.id]}</span>
-                          <span>₹{item.price * cart[item.id]}</span>
+                        <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                          <span className="font-medium text-gray-700">{item.name} x {cart[item.id]}</span>
+                          <span className="font-bold text-primary">₹{item.price * cart[item.id]}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between font-bold text-lg mb-2">
-                        <span>Subtotal</span>
-                        <span>₹{getTotalPrice()}</span>
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="font-semibold">₹{getTotalPrice()}</span>
                       </div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>Delivery Fee</span>
-                        <span>₹40</span>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-600">Delivery Fee</span>
+                        <span className="font-semibold">₹40</span>
                       </div>
-                      <div className="flex justify-between font-bold text-xl border-t pt-2">
-                        <span>Total</span>
-                        <span>₹{getTotalPrice() + 40}</span>
+                      <div className="border-t pt-3 flex justify-between items-center">
+                        <span className="text-xl font-bold text-gray-800">Total</span>
+                        <span className="text-2xl font-bold text-primary">₹{getTotalPrice() + 40}</span>
                       </div>
-                      <a 
-                        href="/cart"
-                        className="w-full mt-4 bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition-colors block text-center"
-                      >
-                        Go to Cart
-                      </a>
                     </div>
+                    <a 
+                      href="/cart"
+                      className="w-full bg-gradient-to-r from-primary to-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-500 hover:to-primary transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 block text-center"
+                    >
+                      Proceed to Cart →
+                    </a>
                   </div>
                 )}
-                
-
               </div>
             </div>
             </div>

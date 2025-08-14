@@ -26,10 +26,9 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     )
     
-    console.log('Login API - Created token for user:', user.email, 'with role:', user.role)
     
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user.toObject()
@@ -45,10 +44,9 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 24 * 60 * 60 * 1000 // 1 days
     })
     
-    console.log('Login API - Cookie set successfully')
     
     return response
     
