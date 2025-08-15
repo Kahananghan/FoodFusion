@@ -8,23 +8,6 @@ import toast from 'react-hot-toast'
 import NotificationSystem from './NotificationSystem'
 import { useAuth } from '@/contexts/AuthContext'
 
-// Add custom CSS for animations
-const styles = `
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slideDown {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.2s ease-out;
-  }
-  .animate-slideDown {
-    animation: slideDown 0.3s ease-out;
-  }
-`
 
 export default function Navbar() {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -37,7 +20,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   // Don't render navbar on admin routes
-  if (pathname?.startsWith('/admin')) {
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/seller') || pathname?.startsWith('/delivery')) {
     return null
   }
 
@@ -97,7 +80,7 @@ export default function Navbar() {
 
   return (
     <>
-      <style jsx global>{styles}</style>
+      
       {/* Top Bar */}
       <div className="bg-gray-900 text-white py-2 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

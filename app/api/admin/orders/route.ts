@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
     
     const orders = await Order.find({})
       .populate('user', 'name email')
-      .populate('restaurant', 'name')
       .populate('deliveryPersonId', 'name')
       .sort({ createdAt: -1 })
       .limit(100)
@@ -22,7 +21,7 @@ export async function GET(request: NextRequest) {
         email: order.user?.email || 'Unknown'
       },
       restaurant: {
-        name: order.restaurant?.name || 'Unknown Restaurant'
+        name: order.restaurant || 'Unknown Restaurant'
       },
       status: order.status,
       total: order.totalAmount,

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Star, Clock, MapPin, Search } from 'lucide-react'
 
-interface ZomatoRestaurant {
+interface Restaurant {
   id: string
   name: string
   cuisines: string
@@ -27,7 +27,7 @@ interface ZomatoRestaurant {
 
 
 export default function RestaurantsPage() {
-  const [restaurants, setRestaurants] = useState<ZomatoRestaurant[]>([])
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [cities, setCities] = useState<string[]>([])
   const [cuisines, setCuisines] = useState<string[]>([])
@@ -86,6 +86,7 @@ export default function RestaurantsPage() {
       
       const response = await fetch(`/api/restaurants?${params}`)
       const data = await response.json()
+      console.log('Restaurants data:', data)
       setRestaurants(data.restaurants || [])
     } catch (error) {
       console.error('Error fetching restaurants:', error)

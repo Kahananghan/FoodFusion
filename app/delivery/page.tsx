@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MapPin, Clock, DollarSign, Package, Navigation, CheckCircle } from 'lucide-react'
+import { MapPin, Clock, DollarSign, Package, Navigation, CheckCircle, Truck, BarChart3, LogOut, History } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface DeliveryOrder {
@@ -132,13 +132,44 @@ export default function DeliveryDashboard() {
     window.open(googleMapsUrl, '_blank')
   }
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' })
+      if (res.ok) {
+        toast.success('Logged out successfully')
+        window.location.href = '/'
+      } else {
+        toast.error('Logout failed')
+      }
+    } catch (error) {
+      toast.error('Something went wrong')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Delivery Dashboard</h1>
-          <p className="text-gray-600 mt-2">Manage your deliveries and track earnings</p>
+      {/* Delivery Navigation Bar */}
+      <nav className="bg-gray-800 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-white">FoodFusion</h1>
+              <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-medium">Delivery Panel</span>
+            </div>
+            <div>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
         </div>
+      </nav>
+      
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -196,20 +227,21 @@ export default function DeliveryDashboard() {
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: 'available', label: 'Available Orders' },
-                { id: 'my-orders', label: 'My Orders' },
-                { id: 'history', label: 'Delivery History' }
+                { id: 'available', label: 'Available Orders', icon: Package },
+                { id: 'my-orders', label: 'My Orders', icon: Truck },
+                { id: 'history', label: 'Delivery History', icon: History }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                     activeTab === tab.id
-                      ? 'border-primary text-primary'
+                      ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {tab.label}
+                  <tab.icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </nav>

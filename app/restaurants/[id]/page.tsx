@@ -68,24 +68,25 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   const fetchMenu = async () => {
-    // Force fallback menu with both items
-    const fallbackMenu = [
-      {
-        id: '1',
-        name: 'Special Dish',
-        description: 'House special with fresh ingredients',
-        price: 350,
-        image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
-      },
-      {
-        id: '2',
-        name: 'Gujarati Dish',
-        description: 'Gujarati special with fresh ingredients',
-        price: 250,
-        image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
+    try {
+      const response = await fetch(`/api/restaurants/${params.id}/menu`)
+      if (response.ok) {
+        const data = await response.json()
+        const formattedMenu = data.menuItems.map((item: any) => ({
+          id: item._id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          image: item.image || 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
+        }))
+        setMenuItems(formattedMenu)
+      } else {
+        setMenuItems([])
       }
-    ]
-    setMenuItems(fallbackMenu)
+    } catch (error) {
+      console.error('Error fetching menu:', error)
+      setMenuItems([])
+    }
     setLoading(false)
   }
 
