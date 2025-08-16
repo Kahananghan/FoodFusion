@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     })
 
     const todayDeliveries = todayOrders.length
-    const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.deliveryFee || 5), 0)
+    const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.deliveryFee || 50), 0)
 
     const stats = {
       todayDeliveries,

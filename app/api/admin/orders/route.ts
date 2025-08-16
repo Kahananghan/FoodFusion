@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
 import Order from '@/models/Order'
+import Restaurant from '@/models/Restaurant'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,24 +13,38 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .limit(100)
 
+    // Get all restaurants to create a mapping
+    const restaurants = await Restaurant.find({}, 'name')
+    const restaurantNames = restaurants.map(r => r.name)
+    
     // Transform orders to match admin interface expectations
-    const transformedOrders = orders.map(order => ({
-      _id: order._id,
-      orderNumber: `ORD${order._id.toString().slice(-6).toUpperCase()}`,
-      customer: {
-        name: order.user?.name || 'Unknown',
-        email: order.user?.email || 'Unknown'
-      },
-      restaurant: {
-        name: order.restaurant || 'Unknown Restaurant'
-      },
-      status: order.status,
-      total: order.totalAmount,
-      createdAt: order.createdAt,
-      deliveryPartner: order.deliveryPersonId ? {
-        name: order.deliveryPersonId.name
-      } : null
-    }))
+    const transformedOrders = orders.map(order => {
+      // Use the stored restaurant name from the order
+      // If it's one of the old default names or empty, use the first available restaurant name
+      let restaurantName = order.restaurant
+      
+      if (!restaurantName || restaurantName === 'My Restaurant' || restaurantName === 'Unknown Restaurant') {
+        restaurantName = restaurantNames.length > 0 ? restaurantNames[0] : 'Unknown Restaurant'
+      }
+      
+      return {
+        _id: order._id,
+        orderNumber: `ORD${order._id.toString().slice(-6).toUpperCase()}`,
+        customer: {
+          name: order.user?.name || 'Unknown',
+          email: order.user?.email || 'Unknown'
+        },
+        restaurant: {
+          name: restaurantName
+        },
+        status: order.status,
+        total: order.totalAmount,
+        createdAt: order.createdAt,
+        deliveryPartner: order.deliveryPersonId ? {
+          name: order.deliveryPersonId.name
+        } : null
+      }
+    })
 
     return NextResponse.json({ orders: transformedOrders })
   } catch (error) {

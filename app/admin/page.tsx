@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, Filter, Download, BarChart3, TrendingUp, Clock, AlertCircle, MapPin, Star, DollarSign } from 'lucide-react'
+import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, Filter, Download, BarChart3, TrendingUp, Clock, AlertCircle, MapPin, Star, DollarSign, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import './admin.css'
@@ -60,6 +60,7 @@ export default function AdminDashboard() {
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [userInfo, setUserInfo] = useState<{name: string, email: string} | null>(null)
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalRestaurants: 0,
@@ -77,7 +78,20 @@ export default function AdminDashboard() {
     fetchRestaurants()
     fetchOrders()
     fetchDeliveryPartners()
+    fetchUserInfo()
   }, [])
+
+  const fetchUserInfo = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      if (res.ok) {
+        setUserInfo(data.user)
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error)
+    }
+  }
 
   const fetchStats = async () => {
     try {
@@ -265,7 +279,18 @@ export default function AdminDashboard() {
               <h1 className="text-2xl font-bold text-white">FoodFusion</h1>
               <span className="bg-orange-600 text-white px-2 py-1 rounded text-sm font-medium">Admin Panel</span>
             </div>
-            <div>
+            <div className="flex items-center space-x-4">
+              {userInfo && (
+                <div className="flex items-center space-x-2 bg-gray-700 px-3 py-2 rounded-lg">
+                  <div className="bg-gray-600 p-2 rounded-full">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-white text-sm">
+                    <div className="font-medium">{userInfo.name}</div>
+                    <div className="text-gray-300 text-xs">{userInfo.email}</div>
+                  </div>
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
@@ -666,6 +691,7 @@ export default function AdminDashboard() {
                     <option value="pending">Pending</option>
                     <option value="confirmed">Confirmed</option>
                     <option value="preparing">Preparing</option>
+                    <option value="ready">Ready</option>
                     <option value="out-for-delivery">Out for Delivery</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
@@ -734,7 +760,9 @@ export default function AdminDashboard() {
                           order.status === 'delivered' ? 'bg-green-100 text-green-800' :
                           order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                           order.status === 'preparing' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
                           order.status === 'out-for-delivery' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'confirmed' ? 'bg-indigo-100 text-indigo-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {order.status === 'out-for-delivery' ? 'Out for Delivery' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -752,6 +780,7 @@ export default function AdminDashboard() {
                           <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
                           <option value="preparing">Preparing</option>
+                          <option value="ready">Ready</option>
                           <option value="out-for-delivery">Out for Delivery</option>
                           <option value="delivered">Delivered</option>
                           <option value="cancelled">Cancelled</option>
@@ -848,11 +877,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 flex items-center">
-                            <Star className="h-3 w-3 mr-1 text-yellow-400" />
-                            {partner.rating?.toFixed(1) || '0.0'}
-                          </div>
-                          <div className="text-sm text-gray-500">{partner.totalDeliveries || 0} deliveries</div>
+                          <div className="text-sm font-medium text-gray-900">{partner.totalDeliveries || 0} deliveries</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -865,7 +890,13 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">₹{partner.earnings?.toFixed(2) || '0.00'}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          ₹{((partner.earnings !== undefined && partner.earnings !== null)
+                            ? partner.earnings.toFixed(2)
+                            : (partner.totalDeliveries && stats.avgOrderValue
+                                ? (partner.totalDeliveries * stats.avgOrderValue * 0.3).toFixed(2)
+                                : '0.00'))}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <select

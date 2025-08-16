@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, DollarSign, Users, ShoppingBag, TrendingUp, Store, BarChart3, LogOut } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Users, ShoppingBag, TrendingUp, Store, BarChart3, LogOut, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface MenuItem {
@@ -20,6 +20,12 @@ export default function SellerDashboard() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
+  const [showRestaurantModal, setShowRestaurantModal] = useState(false)
+  const [restaurantName, setRestaurantName] = useState('')
+  const [isUpdatingRestaurant, setIsUpdatingRestaurant] = useState(false)
+  const [currentRestaurant, setCurrentRestaurant] = useState<{name: string} | null>(null)
+  const [userInfo, setUserInfo] = useState<{name: string, email: string} | null>(null)
+  const [orders, setOrders] = useState<any[]>([])
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -40,7 +46,114 @@ export default function SellerDashboard() {
   useEffect(() => {
     fetchMenuItems()
     fetchStats()
+    checkRestaurant()
+    fetchUserInfo()
+    fetchOrders()
   }, [])
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('/api/seller/orders')
+      const data = await res.json()
+      if (res.ok) {
+        setOrders(data.orders || [])
+        setTimeout(() => calculateStatsFromOrders(data.orders || []), 100)
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    }
+  }
+
+  const calculateStatsFromOrders = (ordersList = orders) => {
+    const confirmedOrders = ordersList.filter(order => order.status !== 'pending' && order.status !== 'cancelled')
+    const totalOrders = confirmedOrders.length
+    const totalRevenue = confirmedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+    
+    setStats(prevStats => ({
+      totalOrders,
+      totalRevenue,
+      activeMenuItems: menuItems.length || prevStats.activeMenuItems,
+      avgRating: 4.2
+    }))
+  }
+
+  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
+    try {
+      const res = await fetch(`/api/seller/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+      
+      if (res.ok) {
+        toast.success('Order status updated successfully!')
+        fetchOrders()
+      } else {
+        toast.error('Failed to update order status')
+      }
+    } catch (error) {
+      toast.error('Something went wrong')
+    }
+  }
+
+  const fetchUserInfo = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      if (res.ok) {
+        setUserInfo(data.user)
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error)
+    }
+  }
+
+  const checkRestaurant = async () => {
+    try {
+      const res = await fetch('/api/seller/restaurant/check')
+      const data = await res.json()
+      if (data.hasRestaurant) {
+        setCurrentRestaurant(data.restaurant)
+      }
+    } catch (error) {
+      console.error('Error checking restaurant:', error)
+    }
+  }
+
+  const handleRestaurantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!restaurantName.trim()) {
+      toast.error('Restaurant name is required')
+      return
+    }
+
+    try {
+      const url = '/api/seller/restaurant'
+      const method = isUpdatingRestaurant ? 'PUT' : 'POST'
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: restaurantName })
+      })
+      
+      const data = await res.json()
+      
+      if (res.ok) {
+        toast.success(isUpdatingRestaurant ? 'Restaurant updated successfully!' : 'Restaurant created successfully!')
+        setShowRestaurantModal(false)
+        setRestaurantName('')
+        setIsUpdatingRestaurant(false)
+        checkRestaurant()
+        fetchMenuItems()
+      } else {
+        toast.error(data.error || 'Failed to save restaurant')
+      }
+    } catch (error) {
+      console.error('Restaurant save error:', error)
+      toast.error('Failed to save restaurant')
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
@@ -48,6 +161,13 @@ export default function SellerDashboard() {
       const data = await res.json()
       if (res.ok) {
         setMenuItems(data.menuItems || [])
+        // Update stats after menu items are loaded
+        setTimeout(() => {
+          setStats(prevStats => ({
+            ...prevStats,
+            activeMenuItems: data.menuItems?.length || 0
+          }))
+        }, 100)
       } else {
         console.error('Fetch menu error:', data)
         if (data.error === 'Restaurant not found') {
@@ -151,7 +271,18 @@ export default function SellerDashboard() {
               <h1 className="text-2xl font-bold text-white">FoodFusion</h1>
               <span className="bg-green-600 text-white px-2 py-1 rounded text-sm font-medium">Seller Panel</span>
             </div>
-            <div>
+            <div className="flex items-center space-x-4">
+              {userInfo && (
+                <div className="flex items-center space-x-2 bg-gray-700 px-3 py-2 rounded-lg">
+                  <div className="bg-gray-600 p-2 rounded-full">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-white text-sm">
+                    <div className="font-medium">{userInfo.name}</div>
+                    <div className="text-gray-300 text-xs">{userInfo.email}</div>
+                  </div>
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
@@ -253,39 +384,29 @@ export default function SellerDashboard() {
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-900">Menu Items</h2>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        // First check if restaurant exists
-                        const checkRes = await fetch('/api/seller/restaurant/check')
-                        const checkData = await checkRes.json()
-                        
-                        if (checkData.hasRestaurant) {
-                          toast.success(`Restaurant "${checkData.restaurant.name}" already exists!`)
-                          fetchMenuItems()
-                          return
-                        }
-                        
-                        // Create restaurant if it doesn't exist
-                        const res = await fetch('/api/seller/restaurant', { method: 'POST' })
-                        const data = await res.json()
-                        
-                        if (res.ok) {
-                          toast.success('Restaurant profile created!')
-                          fetchMenuItems()
-                        } else {
-                          toast.error(data.error)
-                          console.error('Create restaurant error:', data)
-                        }
-                      } catch (error) {
-                        console.error('Restaurant creation error:', error)
-                        toast.error('Failed to create restaurant')
-                      }
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    Create Restaurant
-                  </button>
+                  {currentRestaurant ? (
+                    <button
+                      onClick={() => {
+                        setRestaurantName(currentRestaurant.name)
+                        setIsUpdatingRestaurant(true)
+                        setShowRestaurantModal(true)
+                      }}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      Update Restaurant
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setRestaurantName('')
+                        setIsUpdatingRestaurant(false)
+                        setShowRestaurantModal(true)
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Create Restaurant
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowAddModal(true)}
                     className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center"
@@ -444,6 +565,134 @@ export default function SellerDashboard() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Restaurant Modal */}
+        {showRestaurantModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold mb-4 text-black">
+                {isUpdatingRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
+              </h3>
+              <form onSubmit={handleRestaurantSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Restaurant Name"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  value={restaurantName}
+                  onChange={(e) => setRestaurantName(e.target.value)}
+                />
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRestaurantModal(false)
+                      setRestaurantName('')
+                      setIsUpdatingRestaurant(false)
+                    }}
+                    className="flex-1 px-4 py-2 border text-black border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-orange-600"
+                  >
+                    {isUpdatingRestaurant ? 'Update' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Orders Tab */}
+        {activeTab === 'orders' && (
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Restaurant Orders</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {orders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No orders yet
+                  </div>
+                ) : (
+                  orders.map((order) => (
+                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Order #{order.orderNumber || order._id.slice(-6)}</h3>
+                          <p className="text-gray-600">{order.customer?.name || 'Customer'}</p>
+                          <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-primary">₹{order.totalAmount}</p>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                            order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'preparing' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <h4 className="font-medium text-gray-900 mb-1">Items:</h4>
+                        <div className="text-sm text-gray-600">
+                          {order.items?.map((item: any, index: number) => (
+                            <div key={index}>
+                              {item.quantity}x {item.menuItem?.name || item.name} - ₹{(item.menuItem?.price || item.price) * item.quantity}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        {order.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleOrderStatusUpdate(order._id, 'confirmed')}
+                              className="bg-green-50 text-green-600 px-3 py-1 rounded-lg hover:bg-green-100 transition-colors text-sm"
+                            >
+                              Confirm Order
+                            </button>
+                            <button
+                              onClick={() => handleOrderStatusUpdate(order._id, 'cancelled')}
+                              className="bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100 transition-colors text-sm"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                        {order.status === 'confirmed' && (
+                          <button
+                            onClick={() => handleOrderStatusUpdate(order._id, 'preparing')}
+                            className="bg-yellow-50 text-yellow-600 px-3 py-1 rounded-lg hover:bg-yellow-100 transition-colors text-sm"
+                          >
+                            Start Preparing
+                          </button>
+                        )}
+                        {order.status === 'preparing' && (
+                          <button
+                            onClick={() => handleOrderStatusUpdate(order._id, 'ready')}
+                            className="bg-purple-50 text-purple-600 px-3 py-1 rounded-lg hover:bg-purple-100 transition-colors text-sm"
+                          >
+                            Mark Ready
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

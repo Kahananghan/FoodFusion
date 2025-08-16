@@ -133,66 +133,6 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
     })
   }
 
-  const handleCheckout = async () => {
-    if (getTotalItems() === 0) return
-    
-    setIsCheckingOut(true)
-    try {
-      // Prepare order data for database
-      const orderData = {
-        user: '507f1f77bcf86cd799439011', // Valid ObjectId format
-        restaurant: '507f1f77bcf86cd799439012', // Valid ObjectId format  
-        items: Array.isArray(menuItems) ? menuItems.filter(item => cart[item.id] > 0).map(item => ({
-          menuItem: {
-            name: item.name,
-            price: item.price,
-            image: item.image || ''
-          },
-          quantity: cart[item.id]
-        })) : [],
-        totalAmount: getTotalPrice() + 40,
-        deliveryAddress: {
-          street: '123 Main St',
-          city: 'Mumbai', 
-          state: 'Maharashtra',
-          zipCode: '400001'
-        },
-        status: 'confirmed',
-        deliveryFee: 40
-      }
-      
-      // Save to database
-      console.log('Sending order data:', orderData)
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      })
-      
-      let orderId = Date.now().toString()
-      
-      if (response.ok) {
-        const result = await response.json()
-        console.log('Order saved to database:', result)
-        orderId = result.order._id
-      } else {
-        const errorData = await response.text()
-        console.error('Database save failed:', response.status, errorData)
-        throw new Error('Failed to save order')
-      }
-      
-      setCart({})
-      
-      alert(`Order placed successfully! Order ID: ${orderId}`)
-    } catch (error) {
-      console.error('Checkout error:', error)
-      alert('Checkout failed. Please try again.')
-    } finally {
-      setIsCheckingOut(false)
-    }
-  }
 
   const getTotalItems = () => {
     return Object.values(cart).reduce((sum, count) => sum + count, 0)
@@ -263,13 +203,13 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                 <div className="space-y-6">
                   {menuItems.map((item) => (
                     <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 flex border border-gray-100">
-                      <div className="relative">
+                      <div className="relative flex items-center justify-center w-[200px] h-[150px]">
                         <Image
                           src={item.image}
                           alt={item.name}
-                          width={140}
+                          width={200}
                           height={100}
-                          className="rounded-xl object-cover shadow-md"
+                          className="rounded-xl object-cover shadow-md aspect-[2/1] w-[200px] h-[150px]"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
                       </div>
