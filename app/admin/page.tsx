@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, Filter, Download, BarChart3, TrendingUp, Clock, AlertCircle, MapPin, Star, DollarSign, User } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import './admin.css'
 
@@ -34,7 +33,7 @@ interface Order {
   orderNumber: string
   customer: { name: string; email: string }
   restaurant: { name: string }
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out-for-delivery' | 'delivered' | 'cancelled'
   total: number
   createdAt: string
   deliveryPartner?: { name: string }
@@ -67,9 +66,9 @@ export default function AdminDashboard() {
     totalOrders: 0,
     pendingApprovals: 0,
     activeDeliveryPartners: 0,
-    totalRevenue: 0,
     avgOrderValue: 0,
-    completionRate: 0
+    completionRate: 0,
+    totalRevenue: 0 // will always be recalculated from deliveryPartners
   })
 
   useEffect(() => {
@@ -98,7 +97,11 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/stats')
       const data = await res.json()
       if (res.ok) {
-        setStats(data.stats)
+        setStats(prev => ({
+          ...prev,
+          ...data.stats,
+          totalRevenue: prev.totalRevenue // don't overwrite, keep calculated value
+        }))
       }
     } catch (error) {
       toast.error('Failed to fetch stats')
@@ -149,6 +152,9 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (res.ok) {
         setDeliveryPartners(data.partners)
+        // Calculate total revenue from all delivery partners' earnings
+        const totalRevenue = data.partners.reduce((sum: number, partner: any) => sum + (partner.earnings || 0), 0)
+        setStats(prev => ({ ...prev, totalRevenue }))
       }
     } catch (error) {
       toast.error('Failed to fetch delivery partners')

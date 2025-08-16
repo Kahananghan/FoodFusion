@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
     const dbRestaurants = await Restaurant.find({ status: 'approved' })
       .populate('owner', 'name email')
       .limit(limit ? parseInt(limit) : 50)
-    
-    console.log('Found restaurants:', dbRestaurants.length)
+  
     
     // Transform database restaurants to match frontend format
     const transformedDbRestaurants = dbRestaurants.map(restaurant => ({
@@ -39,7 +38,6 @@ export async function GET(request: NextRequest) {
       has_online_delivery: 1
     }))
     
-    console.log('Transformed restaurants:', transformedDbRestaurants)
     
     // Apply filters to database restaurants
     let filteredRestaurants = transformedDbRestaurants

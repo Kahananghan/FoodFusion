@@ -69,7 +69,6 @@ class DatasetAPI {
         has_online_delivery: row.has_online_delivery === 'Yes' ? 1 : 0,
         delivery_time: Math.floor(Math.random() * 30) + 20
       }))
-      console.log(`Loaded ${this.restaurants.length} restaurants from dataset`)
     } catch (error) {
       console.error('Error parsing JSON:', error)
       this.loadFallbackData()

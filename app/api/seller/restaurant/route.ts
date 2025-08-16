@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
     })
     
     const savedRestaurant = await restaurant.save()
-    console.log('Restaurant created:', savedRestaurant)
 
     return NextResponse.json({ message: 'Restaurant created successfully', restaurant: savedRestaurant }, { status: 201 })
   } catch (error) {

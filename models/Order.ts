@@ -13,14 +13,17 @@ const OrderSchema = new mongoose.Schema({
   }],
   totalAmount: { type: Number, required: true },
   deliveryAddress: {
-    name: String,
-    phone: String,
-    street: { type: String, required: true },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    zipCode: { type: String, required: true },
-    landmark: String,
-    type: String
+    type: new mongoose.Schema({
+      name: { type: String, required: true },
+      phone: { type: String, required: true },
+      street: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      zipCode: { type: String, required: true },
+      landmark: { type: String },
+      type: { type: String, enum: ['home', 'office', 'other'], default: 'home' }
+    }, { _id: false, id: false }),
+    required: true
   },
   status: {
     type: String,

@@ -86,7 +86,6 @@ export default function RestaurantsPage() {
       
       const response = await fetch(`/api/restaurants?${params}`)
       const data = await response.json()
-      console.log('Restaurants data:', data)
       setRestaurants(data.restaurants || [])
     } catch (error) {
       console.error('Error fetching restaurants:', error)

@@ -33,19 +33,13 @@ export async function GET(request: NextRequest) {
           state: order.deliveryAddress.state,
           zipCode: order.deliveryAddress.zipCode,
           landmark: order.deliveryAddress.landmark || ''
-        } : (order.user?.addresses?.[0] ? {
-          street: order.user.addresses[0].street,
-          city: order.user.addresses[0].city,
-          state: order.user.addresses[0].state,
-          zipCode: order.user.addresses[0].zipCode,
-          landmark: order.user.addresses[0].landmark || ''
         } : {
-          street: '123 Main Street',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          zipCode: '400001',
+          street: 'Address not available',
+          city: '',
+          state: '',
+          zipCode: '',
           landmark: ''
-        })
+        }
       },
       restaurant: {
         name: order.restaurant || 'Restaurant',

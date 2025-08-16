@@ -65,8 +65,8 @@ export default function SellerDashboard() {
   }
 
   const calculateStatsFromOrders = (ordersList = orders) => {
-    const confirmedOrders = ordersList.filter(order => order.status !== 'pending' && order.status !== 'cancelled')
-    const totalOrders = confirmedOrders.length
+    const confirmedOrders = ordersList.filter(order => order.status !== 'pending' && order.status !== 'cancelled' && order.status === 'delivered')
+    const totalOrders = ordersList.length
     const totalRevenue = confirmedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
     
     setStats(prevStats => ({

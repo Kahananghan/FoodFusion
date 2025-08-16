@@ -430,9 +430,9 @@ export default function CartPage() {
                         value="home"
                         checked={deliveryAddress.type === 'home'}
                         onChange={(e) => setDeliveryAddress({ ...deliveryAddress, type: e.target.value })}
-                        className="mr-2 text-primary focus:ring-primary"
+                        className="mr-2 text-gray-800 "
                       />
-                      🏠 Home
+                      <span className="text-gray-800">🏠 Home</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -443,7 +443,7 @@ export default function CartPage() {
                         onChange={(e) => setDeliveryAddress({ ...deliveryAddress, type: e.target.value })}
                         className="mr-2 text-primary focus:ring-primary"
                       />
-                      🏢 Office
+                      <span className="text-gray-800">🏢 Office</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -454,7 +454,7 @@ export default function CartPage() {
                         onChange={(e) => setDeliveryAddress({ ...deliveryAddress, type: e.target.value })}
                         className="mr-2 text-primary focus:ring-primary"
                       />
-                      📍 Other
+                      <span className="text-gray-800">📍 Other</span>
                     </label>
                   </div>
                 </div>
