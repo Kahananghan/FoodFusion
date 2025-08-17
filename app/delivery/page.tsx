@@ -45,8 +45,9 @@ export default function DeliveryDashboard() {
   const [userInfo, setUserInfo] = useState<{name: string, email: string} | null>(null)
   const [stats, setStats] = useState({
     todayDeliveries: 0,
+    totalDeliveries: 0,
     todayEarnings: 0,
-    avgDeliveryTime: 0,
+    totalEarnings: 0,
     rating: 0
   })
 
@@ -91,9 +92,7 @@ export default function DeliveryDashboard() {
         const delivered = data.orders.filter((order: DeliveryOrder) => order.status === 'delivered');
         setMyOrders(nonDelivered);
         setDeliveryHistory(delivered);
-        // Calculate total earnings as 30% of totalAmount for all delivered orders
-        const totalEarnings = delivered.reduce((sum: number, order: DeliveryOrder) => sum + Math.round(order.totalAmount * 0.3), 0);
-        setStats((prev) => ({ ...prev, todayEarnings: totalEarnings }));
+  // ...existing code...
       }
     } catch (error) {
       toast.error('Failed to fetch my orders')
@@ -200,7 +199,7 @@ export default function DeliveryDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -209,6 +208,18 @@ export default function DeliveryDashboard() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Today's Deliveries</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.todayDeliveries}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Deliveries</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalDeliveries}</p>
               </div>
             </div>
           </div>
@@ -227,12 +238,12 @@ export default function DeliveryDashboard() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock className="h-6 w-6 text-purple-600" />
+              <div className="p-2 bg-green-200 rounded-lg">
+                <IndianRupee className="h-6 w-6 text-green-800" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Avg Delivery Time</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.avgDeliveryTime}min</p>
+                <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                <p className="text-2xl font-bold text-gray-900">₹{stats.totalEarnings}</p>
               </div>
             </div>
           </div>

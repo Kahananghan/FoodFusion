@@ -20,19 +20,29 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    // Today's delivered orders
     const todayOrders = await Order.find({
       deliveryPersonId: decoded.userId,
       createdAt: { $gte: today },
       status: 'delivered'
     })
 
-    const todayDeliveries = todayOrders.length
-    const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.deliveryFee || 50), 0)
+    // All delivered orders for this user
+    const totalOrders = await Order.find({
+      deliveryPersonId: decoded.userId,
+      status: 'delivered'
+    })
+
+  const todayDeliveries = todayOrders.length
+  const todayEarnings = todayOrders.reduce((sum, order) => sum + Math.round((order.totalAmount || 0) * 0.3), 0)
+  const totalDeliveries = totalOrders.length
+  const totalEarnings = totalOrders.reduce((sum, order) => sum + Math.round((order.totalAmount || 0) * 0.3), 0)
 
     const stats = {
       todayDeliveries,
       todayEarnings,
-      avgDeliveryTime: 28,
+      totalDeliveries,
+      totalEarnings,
       rating: 4.8
     }
 

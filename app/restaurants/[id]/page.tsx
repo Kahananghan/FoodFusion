@@ -37,8 +37,6 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<{[key: string]: number}>({})
   const [loading, setLoading] = useState(true)
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [orders, setOrders] = useState<any[]>([])
 
   useEffect(() => {
     fetchRestaurant()

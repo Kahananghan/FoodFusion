@@ -377,6 +377,66 @@ export default function SellerDashboard() {
           </div>
         )}
 
+        {/* Sales Reports Tab */}
+        {activeTab === 'reports' && (
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-yellow-600" /> Sales Reports
+            </h2>
+            {orders.filter(order => order.status === 'delivered').length === 0 ? (
+              <div className="text-center py-12 text-gray-500 text-lg">No sales data available</div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="flex flex-wrap gap-6 mb-6">
+                  <div className="bg-green-50 rounded-xl px-6 py-4 flex flex-col items-center shadow-sm min-w-[180px]">
+                    <span className="text-xs text-gray-500 font-medium mb-1">Total Delivered Orders</span>
+                    <span className="text-2xl font-bold text-green-700">{orders.filter(order => order.status === 'delivered').length}</span>
+                  </div>
+                  <div className="bg-blue-50 rounded-xl px-6 py-4 flex flex-col items-center shadow-sm min-w-[180px]">
+                    <span className="text-xs text-gray-500 font-medium mb-1">Total Sales</span>
+                    <span className="text-2xl font-bold text-blue-700">
+                      ₹{orders.filter(order => order.status === 'delivered').reduce((sum, order) => sum + (order.totalAmount || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-purple-50 rounded-xl px-6 py-4 flex flex-col items-center shadow-sm min-w-[180px]">
+                    <span className="text-xs text-gray-500 font-medium mb-1">Total Earning (70%)</span>
+                    <span className="text-2xl font-bold text-purple-700">
+                      ₹{orders.filter(order => order.status === 'delivered').reduce((sum, order) => sum + Math.round((order.totalAmount || 0) * 0.7), 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Order #</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Total</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Seller Earning (70%)</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.filter(order => order.status === 'delivered').map((order, idx) => (
+                        <tr key={order._id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-500">{order.orderNumber || order._id.slice(-6)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(order.createdAt).toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-gray-500">₹{(order.totalAmount || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap font-semibold text-green-700">₹{Math.round((order.totalAmount || 0) * 0.7).toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Delivered</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Menu Management Tab */}
         {activeTab === 'menu' && (
           <div className="bg-white rounded-lg shadow-sm">
