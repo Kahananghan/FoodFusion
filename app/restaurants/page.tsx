@@ -15,8 +15,8 @@ interface Restaurant {
   }
   location: {
     address: string
-    locality: string
     city: string
+    state: string
   }
   featured_image: string
   average_cost_for_two: number
@@ -194,23 +194,10 @@ export default function RestaurantsPage() {
                   
                   <div className="flex items-center text-gray-500 mb-4">
                     <MapPin className="h-4 w-4 mr-2 text-primary" />
-                    <span className="text-sm">{restaurant.location.locality}, {restaurant.location.city}</span>
+                    <span className="text-sm">{restaurant.location.city}, {restaurant.location.state}</span>
                   </div>
                   
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                        <span className="text-sm text-gray-600">30-45 min</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-primary">
-                        {restaurant.currency}{restaurant.average_cost_for_two}
-                      </p>
-                      <p className="text-xs text-gray-500">for two</p>
-                    </div>
-                  </div>
+                  
                 </div>
               </div>
             </Link>

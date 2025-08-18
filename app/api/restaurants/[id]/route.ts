@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     await dbConnect()
     
     // Try to find restaurant in database first
-    const dbRestaurant = await Restaurant.findById(params.id).populate('owner', 'name email')
+  const dbRestaurant = await (Restaurant as any)['findById'](params.id).populate('owner', 'name email')
     
     if (dbRestaurant) {
       // Transform database restaurant to match frontend format
@@ -21,8 +21,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         },
         location: {
           address: dbRestaurant.address.street,
-          locality: dbRestaurant.address.city,
-          city: dbRestaurant.address.city
+          city: dbRestaurant.address.city,
+          state: dbRestaurant.address.state
         },
         featured_image: dbRestaurant.image,
         average_cost_for_two: dbRestaurant.minimumOrder * 2,

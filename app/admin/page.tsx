@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, Filter, Download, BarChart3, TrendingUp, Clock, AlertCircle, MapPin, Star, DollarSign, User } from 'lucide-react'
+import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, BarChart3, TrendingUp, Clock, AlertCircle, MapPin, User, IndianRupee } from 'lucide-react'
 import toast from 'react-hot-toast'
 import './admin.css'
 
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <div className="p-3 bg-orange-100 rounded-full">
-                    <DollarSign className="h-6 w-6 text-orange-600" />
+                    <IndianRupee className="h-6 w-6 text-orange-600" />
                   </div>
                 </div>
               </div>
@@ -487,10 +487,6 @@ export default function AdminDashboard() {
                       className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                   </div>
-                  <button className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </button>
                 </div>
               </div>
             </div>
@@ -702,10 +698,6 @@ export default function AdminDashboard() {
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
-                  <button className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </button>
                 </div>
               </div>
             </div>
@@ -832,10 +824,6 @@ export default function AdminDashboard() {
                     <option value="busy">Busy</option>
                     <option value="offline">Offline</option>
                   </select>
-                  <button className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </button>
                 </div>
               </div>
             </div>

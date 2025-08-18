@@ -21,9 +21,24 @@ export default function SellerDashboard() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [showRestaurantModal, setShowRestaurantModal] = useState(false)
-  const [restaurantName, setRestaurantName] = useState('')
   const [isUpdatingRestaurant, setIsUpdatingRestaurant] = useState(false)
-  const [currentRestaurant, setCurrentRestaurant] = useState<{name: string} | null>(null)
+  const [currentRestaurant, setCurrentRestaurant] = useState<any | null>(null)
+  const [restaurantForm, setRestaurantForm] = useState({
+    name: '',
+    description: '',
+    image: '',
+    cuisine: '' as string, // comma separated input
+    deliveryTime: '',
+    deliveryFee: '' as string | number, // keep empty for placeholder
+    minimumOrder: '' as string | number,
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    },
+    isOpen: true
+  })
   const [userInfo, setUserInfo] = useState<{name: string, email: string} | null>(null)
   const [orders, setOrders] = useState<any[]>([])
   const [stats, setStats] = useState({
@@ -46,7 +61,7 @@ export default function SellerDashboard() {
   useEffect(() => {
     fetchMenuItems()
     fetchStats()
-    checkRestaurant()
+  checkRestaurant()
     fetchUserInfo()
     fetchOrders()
   }, [])
@@ -110,10 +125,28 @@ export default function SellerDashboard() {
 
   const checkRestaurant = async () => {
     try {
-      const res = await fetch('/api/seller/restaurant/check')
+      const res = await fetch('/api/seller/restaurant')
       const data = await res.json()
-      if (data.hasRestaurant) {
+      if (data.restaurant) {
         setCurrentRestaurant(data.restaurant)
+        setRestaurantForm({
+          name: data.restaurant.name || '',
+            description: data.restaurant.description || '',
+            image: data.restaurant.image || '',
+            cuisine: (data.restaurant.cuisine || []).join(', '),
+            deliveryTime: data.restaurant.deliveryTime || '',
+            deliveryFee: data.restaurant.deliveryFee?.toString() || '',
+            minimumOrder: data.restaurant.minimumOrder?.toString() || '',
+            address: {
+              street: data.restaurant.address?.street || '',
+              city: data.restaurant.address?.city || '',
+              state: data.restaurant.address?.state || '',
+              zipCode: data.restaurant.address?.zipCode || ''
+            },
+            isOpen: data.restaurant.isOpen !== undefined ? data.restaurant.isOpen : true
+        })
+      } else {
+        setCurrentRestaurant(null)
       }
     } catch (error) {
       console.error('Error checking restaurant:', error)
@@ -122,35 +155,29 @@ export default function SellerDashboard() {
 
   const handleRestaurantSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!restaurantName.trim()) {
-      toast.error('Restaurant name is required')
-      return
+    const payload = {
+      ...restaurantForm,
+      cuisine: restaurantForm.cuisine.split(',').map(c => c.trim()).filter(Boolean),
+      deliveryFee: restaurantForm.deliveryFee === '' ? 0 : Number(restaurantForm.deliveryFee),
+      minimumOrder: restaurantForm.minimumOrder === '' ? 0 : Number(restaurantForm.minimumOrder)
     }
-
     try {
-      const url = '/api/seller/restaurant'
-      const method = isUpdatingRestaurant ? 'PUT' : 'POST'
-      
-      const res = await fetch(url, {
+      const method = currentRestaurant ? 'PUT' : 'POST'
+      const res = await fetch('/api/seller/restaurant', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: restaurantName })
+        body: JSON.stringify(payload)
       })
-      
       const data = await res.json()
-      
       if (res.ok) {
-        toast.success(isUpdatingRestaurant ? 'Restaurant updated successfully!' : 'Restaurant created successfully!')
+        toast.success(currentRestaurant ? 'Restaurant updated' : 'Restaurant created')
         setShowRestaurantModal(false)
-        setRestaurantName('')
         setIsUpdatingRestaurant(false)
         checkRestaurant()
-        fetchMenuItems()
       } else {
         toast.error(data.error || 'Failed to save restaurant')
       }
-    } catch (error) {
-      console.error('Restaurant save error:', error)
+    } catch (err) {
       toast.error('Failed to save restaurant')
     }
   }
@@ -296,6 +323,45 @@ export default function SellerDashboard() {
       </nav>
       
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Restaurant Heading / Banner */}
+        {currentRestaurant ? (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 leading-tight">{currentRestaurant.name}</h2>
+              <div className="mt-1 flex items-center gap-3 text-sm">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentRestaurant.status === 'approved' ? 'bg-green-100 text-green-700' : currentRestaurant.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{currentRestaurant.status || 'approved'}</span>
+                <span className="text-gray-500">Restaurant Profile</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setIsUpdatingRestaurant(true)
+                  setShowRestaurantModal(true)
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm"
+              >
+                Edit Restaurant
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 p-5 bg-blue-50 border border-blue-200 rounded-xl flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-blue-800">No restaurant created yet</h2>
+              <p className="text-sm text-blue-700 mt-1">Create your restaurant profile to start adding menu items and receiving orders.</p>
+            </div>
+            <button
+              onClick={() => {
+                setIsUpdatingRestaurant(false)
+                setShowRestaurantModal(true)
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm"
+            >
+              + Create Restaurant
+            </button>
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-8">
@@ -444,29 +510,15 @@ export default function SellerDashboard() {
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-900">Menu Items</h2>
                 <div className="flex space-x-2">
-                  {currentRestaurant ? (
-                    <button
-                      onClick={() => {
-                        setRestaurantName(currentRestaurant.name)
-                        setIsUpdatingRestaurant(true)
-                        setShowRestaurantModal(true)
-                      }}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
-                    >
-                      Update Restaurant
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setRestaurantName('')
-                        setIsUpdatingRestaurant(false)
-                        setShowRestaurantModal(true)
-                      }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      Create Restaurant
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setIsUpdatingRestaurant(!!currentRestaurant)
+                      setShowRestaurantModal(true)
+                    }}
+                    className={`px-4 py-2 rounded-lg transition-colors text-sm ${currentRestaurant ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                  >
+                    {currentRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
+                  </button>
                   <button
                     onClick={() => setShowAddModal(true)}
                     className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center"
@@ -569,7 +621,6 @@ export default function SellerDashboard() {
                   type="number"
                   placeholder="Price"
                   required
-                  step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   value={editingItem.price}
                   onChange={(e) => setEditingItem({ ...editingItem, price: parseFloat(e.target.value) })}
@@ -634,23 +685,36 @@ export default function SellerDashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4 text-black">
-                {isUpdatingRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
+                {currentRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
               </h3>
               <form onSubmit={handleRestaurantSubmit} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Restaurant Name"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  value={restaurantName}
-                  onChange={(e) => setRestaurantName(e.target.value)}
-                />
+                <input type="text" placeholder="Name" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.name} onChange={e=>setRestaurantForm(f=>({...f,name:e.target.value}))} />
+                <textarea placeholder="Description" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.description} onChange={e=>setRestaurantForm(f=>({...f,description:e.target.value}))} />
+                <input type="url" placeholder="Image URL" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.image} onChange={e=>setRestaurantForm(f=>({...f,image:e.target.value}))} />
+                <input type="text" placeholder="Cuisine (comma separated)" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.cuisine} onChange={e=>setRestaurantForm(f=>({...f,cuisine:e.target.value}))} />
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" placeholder="Delivery Time" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.deliveryTime} onChange={e=>setRestaurantForm(f=>({...f,deliveryTime:e.target.value}))} />
+                  <input type="number" placeholder="Delivery Fee" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.deliveryFee} onChange={e=>{
+                    const val = e.target.value
+                    setRestaurantForm(f=>({...f,deliveryFee: val === '' ? '' : val}))
+                  }} />
+                  <input type="number" placeholder="Minimum Order" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.minimumOrder} onChange={e=>{
+                    const val = e.target.value
+                    setRestaurantForm(f=>({...f,minimumOrder: val === '' ? '' : val}))
+                  }} />
+                  <label className="flex items-center text-sm text-black space-x-2"><input type="checkbox" checked={restaurantForm.isOpen} onChange={e=>setRestaurantForm(f=>({...f,isOpen:e.target.checked}))} /> <span>Open</span></label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" placeholder="Street" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.address.street} onChange={e=>setRestaurantForm(f=>({...f,address:{...f.address,street:e.target.value}}))} />
+                  <input type="text" placeholder="City" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.address.city} onChange={e=>setRestaurantForm(f=>({...f,address:{...f.address,city:e.target.value}}))} />
+                  <input type="text" placeholder="State" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.address.state} onChange={e=>setRestaurantForm(f=>({...f,address:{...f.address,state:e.target.value}}))} />
+                  <input type="text" placeholder="Zip Code" required className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" value={restaurantForm.address.zipCode} onChange={e=>setRestaurantForm(f=>({...f,address:{...f.address,zipCode:e.target.value}}))} />
+                </div>
                 <div className="flex space-x-3">
                   <button
                     type="button"
                     onClick={() => {
                       setShowRestaurantModal(false)
-                      setRestaurantName('')
                       setIsUpdatingRestaurant(false)
                     }}
                     className="flex-1 px-4 py-2 border text-black border-gray-300 rounded-lg hover:bg-gray-50"
@@ -661,7 +725,7 @@ export default function SellerDashboard() {
                     type="submit"
                     className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-orange-600"
                   >
-                    {isUpdatingRestaurant ? 'Update' : 'Create'}
+                    {currentRestaurant ? 'Update' : 'Create'}
                   </button>
                 </div>
               </form>
@@ -782,7 +846,6 @@ export default function SellerDashboard() {
                   type="number"
                   placeholder="Price"
                   required
-                  step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   value={newItem.price}
                   onChange={(e) => setNewItem({ ...newItem, price: parseFloat(e.target.value) })}

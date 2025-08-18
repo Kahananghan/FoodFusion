@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit')
     
     // Get approved restaurants from database
-    const dbRestaurants = await Restaurant.find({ status: 'approved' })
+  const dbRestaurants = await (Restaurant as any).find({ status: 'approved' })
       .populate('owner', 'name email')
       .limit(limit ? parseInt(limit) : 50)
   
@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       },
       location: {
         address: restaurant.address.street,
-        locality: restaurant.address.city,
-        city: restaurant.address.city
+        city: restaurant.address.city,
+        state: restaurant.address.state
       },
       featured_image: restaurant.image,
       average_cost_for_two: restaurant.minimumOrder * 2,

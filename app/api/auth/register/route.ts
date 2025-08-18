@@ -7,10 +7,10 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect()
     
-    const { name, email, password, phone, role } = await request.json()
+  const { name, email, password, phone, role} = await request.json()
     
     // Check if user already exists
-    const existingUser = await User.findOne({ email })
+  const existingUser = await (User as any).findOne({ email })
     if (existingUser) {
       return NextResponse.json({ error: 'User already exists' }, { status: 400 })
     }
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
     
+
     // Create user
     const user = new User({
       name,

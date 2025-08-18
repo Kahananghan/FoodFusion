@@ -24,8 +24,8 @@ interface Restaurant {
   }
   location: {
     address: string
-    locality: string
     city: string
+    state: string
   }
   featured_image: string
   average_cost_for_two: number
@@ -182,13 +182,10 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                   </div>
                   <p className="text-gray-600 flex items-center text-lg">
                     <MapPin className="h-5 w-5 mr-2 text-primary" />
-                    {restaurant.location.locality}, {restaurant.location.city}
+                    {restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}
                   </p>
                 </div>
-                <div className="text-right bg-primary/10 p-4 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">{restaurant.currency}{restaurant.average_cost_for_two}</p>
-                  <p className="text-gray-600">for two</p>
-                </div>
+                
               </div>
             </div>
 
