@@ -23,6 +23,16 @@ async function dbConnect() {
     }
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const redacted = MONGODB_URI.replace(/:\\?[^:@/]+@/, ':***@')
+          // Log once
+          if (!(global as any)._mongoLogged) {
+            console.log('[MongoDB] Connected to', mongoose.connection.name, 'via', redacted)
+            ;(global as any)._mongoLogged = true
+          }
+        } catch {}
+      }
       return mongoose
     })
   }

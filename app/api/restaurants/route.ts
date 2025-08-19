@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Restaurant from '@/models/Restaurant'
+import '@/models/User'
 
 export async function GET(request: NextRequest) {
   try {

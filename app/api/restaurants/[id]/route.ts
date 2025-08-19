@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Restaurant from '@/models/Restaurant'
+import mongoose from 'mongoose'
+// Register User model for populate
+import '@/models/User'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await dbConnect()
     
     // Try to find restaurant in database first
-  const dbRestaurant = await (Restaurant as any)['findById'](params.id).populate('owner', 'name email')
+  // Validate id
+  if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    return NextResponse.json({ error: 'Invalid restaurant id' }, { status: 400 })
+  }
+
+  const dbRestaurant = await (Restaurant as any).findById(params.id).populate('owner', 'name email')
     
     if (dbRestaurant) {
       // Transform database restaurant to match frontend format
