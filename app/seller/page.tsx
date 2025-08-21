@@ -21,7 +21,7 @@ export default function SellerDashboard() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [showRestaurantModal, setShowRestaurantModal] = useState(false)
-  const [isUpdatingRestaurant, setIsUpdatingRestaurant] = useState(false)
+  const [isUpdatingRestaurant, setIsUpdatingRestaurant] = useState(false) 
   const [currentRestaurant, setCurrentRestaurant] = useState<any | null>(null)
   const [restaurantForm, setRestaurantForm] = useState({
     name: '',
@@ -509,16 +509,7 @@ export default function SellerDashboard() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-900">Menu Items</h2>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setIsUpdatingRestaurant(!!currentRestaurant)
-                      setShowRestaurantModal(true)
-                    }}
-                    className={`px-4 py-2 rounded-lg transition-colors text-sm ${currentRestaurant ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                  >
-                    {currentRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
-                  </button>
+                <div className="flex">
                   <button
                     onClick={() => setShowAddModal(true)}
                     className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center"
@@ -543,7 +534,18 @@ export default function SellerDashboard() {
                         )}
                       </div>
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">{item.name}</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {item.isVegetarian ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                          Veg
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                          Non-Veg
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-gray-600 text-sm mb-2">{item.description}</p>
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-lg font-bold text-primary">₹{item.price}</span>
@@ -640,17 +642,30 @@ export default function SellerDashboard() {
                   value={editingItem.image}
                   onChange={(e) => setEditingItem({ ...editingItem, image: e.target.value })}
                 />
-                <div className="flex items-center space-x-4 text-black">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="mr-2"
-                      checked={editingItem.isVegetarian}
-                      onChange={(e) => setEditingItem({ ...editingItem, isVegetarian: e.target.checked })}
-                    />
-                    Vegetarian
-                  </label>
-                  <label className="flex items-center">
+                <div className="flex items-center flex-wrap gap-4 text-black">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="edit-veg-type"
+                        className="mr-2"
+                        checked={editingItem.isVegetarian === true}
+                        onChange={() => setEditingItem({ ...editingItem, isVegetarian: true })}
+                      />
+                      Veg
+                    </label>
+                    <label className="flex items-center cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="edit-veg-type"
+                        className="mr-2"
+                        checked={editingItem.isVegetarian === false}
+                        onChange={() => setEditingItem({ ...editingItem, isVegetarian: false })}
+                      />
+                      Non-Veg
+                    </label>
+                  </div>
+                  <label className="flex items-center cursor-pointer select-none">
                     <input
                       type="checkbox"
                       className="mr-2"
@@ -865,17 +880,30 @@ export default function SellerDashboard() {
                   value={newItem.image}
                   onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
                 />
-                <div className="flex items-center space-x-4 text-black">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="mr-2"
-                      checked={newItem.isVegetarian}
-                      onChange={(e) => setNewItem({ ...newItem, isVegetarian: e.target.checked })}
-                    />
-                    Vegetarian
-                  </label>
-                  <label className="flex items-center">
+                <div className="flex items-center flex-wrap gap-4 text-black">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="add-veg-type"
+                        className="mr-2"
+                        checked={newItem.isVegetarian === true}
+                        onChange={() => setNewItem({ ...newItem, isVegetarian: true })}
+                      />
+                      Veg
+                    </label>
+                    <label className="flex items-center cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="add-veg-type"
+                        className="mr-2"
+                        checked={newItem.isVegetarian === false}
+                        onChange={() => setNewItem({ ...newItem, isVegetarian: false })}
+                      />
+                      Non-Veg
+                    </label>
+                  </div>
+                  <label className="flex items-center cursor-pointer select-none">
                     <input
                       type="checkbox"
                       className="mr-2"

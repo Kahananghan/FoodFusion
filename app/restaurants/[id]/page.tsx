@@ -12,6 +12,7 @@ interface MenuItem {
   description: string
   price: number
   image: string
+  isVegetarian?: boolean
 }
 
 interface Restaurant {
@@ -75,7 +76,8 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
           name: item.name,
           description: item.description,
           price: item.price,
-          image: item.image || 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop'
+          image: item.image || 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=300&h=200&fit=crop',
+          isVegetarian: !!item.isVegetarian
         }))
         setMenuItems(formattedMenu)
       } else {
@@ -209,11 +211,19 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
                       </div>
                       <div className="ml-6 flex-1">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">{item.name}</h3>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
+                          {item.isVegetarian !== undefined && (
+                            item.isVegetarian ? (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Veg</span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">Non-Veg</span>
+                            )
+                          )}
+                        </div>
                         <p className="text-gray-600 mb-3 leading-relaxed">{item.description}</p>
                         <div className="flex items-center">
                           <span className="text-2xl font-bold text-primary">₹{item.price}</span>
-                          <div className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Popular</div>
                         </div>
                       </div>
                       <div className="flex items-center ml-4">

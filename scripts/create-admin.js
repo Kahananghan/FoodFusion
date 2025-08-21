@@ -1,58 +1,71 @@
+// Load environment variables (.env.local preferred)
+try {
+  const fs = require('fs')
+  if (fs.existsSync('.env.local')) {
+    require('dotenv').config({ path: '.env.local' })
+  } else if (fs.existsSync('.env')) {
+    require('dotenv').config()
+  }
+} catch {}
+
 const bcrypt = require('bcryptjs')
 const mongoose = require('mongoose')
 
-// User Schema (simplified)
+// Minimal user schema (kept local to avoid ts-node / module import issues)
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: String,
-  role: { 
-    type: String, 
-    enum: ['customer', 'restaurant', 'admin', 'delivery'], 
-    default: 'customer' 
+  role: {
+    type: String,
+    enum: ['customer', 'restaurant', 'admin', 'delivery'],
+    default: 'customer'
   },
   isActive: { type: Boolean, default: true }
-}, {
-  timestamps: true
-})
+}, { timestamps: true })
 
 const User = mongoose.models.User || mongoose.model('User', UserSchema)
 
 async function createAdmin() {
-  try {
-    // Connect to MongoDB
-    await mongoose.connect('process.env.MONGODB_URI')
-    console.log('Connected to MongoDB')
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    console.error('[create-admin] MONGODB_URI not set. Add it to .env.local')
+    process.exit(1)
+  }
 
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@demo.com' })
+  const redacted = uri.replace(/:\\?[^:@/]+@/, ':***@')
+  console.log('[create-admin] Connecting to', redacted)
+
+  try {
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 15000 })
+    console.log('[create-admin] Connected. DB:', mongoose.connection.name)
+
+    const email = 'admin@demo.com'
+    const existingAdmin = await User.findOne({ email })
     if (existingAdmin) {
-      console.log('Admin user already exists')
-      process.exit(0)
+      console.log('[create-admin] Admin already exists. Skipping.')
+      return
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash('password', 12)
+    const passwordPlain = 'password'
+    const hashedPassword = await bcrypt.hash(passwordPlain, 12)
 
-    // Create admin user
-    const admin = new User({
+    await User.create({
       name: 'Admin User',
-      email: 'admin@demo.com',
+      email,
       password: hashedPassword,
       role: 'admin'
     })
 
-    await admin.save()
-    console.log('Admin user created successfully!')
-    console.log('Email: admin@demo.com')
-    console.log('Password: password')
-
-  } catch (error) {
-    console.error('Error creating admin:', error)
+    console.log('[create-admin] Admin user created successfully')
+    console.log('[create-admin] Credentials -> Email:', email, 'Password:', passwordPlain)
+  } catch (err) {
+    console.error('[create-admin] Error:', err.message)
+    process.exitCode = 1
   } finally {
-    await mongoose.disconnect()
-    process.exit(0)
+    try { await mongoose.disconnect() } catch {}
+    console.log('[create-admin] Disconnected.')
   }
 }
 
