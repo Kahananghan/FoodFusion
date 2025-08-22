@@ -8,7 +8,7 @@ const restaurants = [
     cuisine: 'North Indian',
     rating: 4.6,
     deliveryTime: '25-35 min',
-    deliveryFee: 49,
+    deliveryFee: 250,
     image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=60'
   },
   {
@@ -17,7 +17,7 @@ const restaurants = [
     cuisine: 'South Indian',
     rating: 4.4,
     deliveryTime: '20-30 min',
-    deliveryFee: 39,
+    deliveryFee: 120,
     image: 'https://images.unsplash.com/photo-1630383249896-424e482df921?w=400&h=300&fit=crop'
   },
   {
@@ -26,7 +26,7 @@ const restaurants = [
     cuisine: 'Hyderabadi',
     rating: 4.8,
     deliveryTime: '30-40 min',
-    deliveryFee: 59,
+    deliveryFee: 180,
     image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400&h=300&fit=crop'
   }
 ]
@@ -86,7 +86,7 @@ export default function FeaturedRestaurants() {
         
         <div className="text-center mt-16">
           <button className="group bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 px-10 py-4 rounded-2xl font-semibold hover:from-primary hover:to-orange-600 hover:text-white transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-            <span className="relative z-10">View All Restaurants</span>
+            <a href='/restaurants' className="relative z-10">View All Restaurants</a>
           </button>
         </div>
       </div>

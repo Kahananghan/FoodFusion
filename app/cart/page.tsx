@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Minus, Trash2, MapPin } from 'lucide-react'
 import PaymentModal from '@/components/PaymentModal'
 import toast from 'react-hot-toast'
+import Loader from '@/components/Loader'
 
 interface CartItem {
   id: string
@@ -16,6 +17,7 @@ interface CartItem {
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [deliveryAddress, setDeliveryAddress] = useState({
     name: '',
@@ -105,11 +107,18 @@ export default function CartPage() {
             restaurant: item.restaurant
           }))
           setCartItems(formattedItems)
+        } else {
+          setCartItems([])
         }
+      } else {
+        setCartItems([])
       }
     } catch (error) {
       console.error('Error fetching cart items:', error)
       toast.error('Failed to load cart items')
+      setCartItems([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -212,6 +221,10 @@ export default function CartPage() {
     } catch (error) {
       toast.error('Something went wrong')
     }
+  }
+
+  if (loading) {
+    return <Loader fullscreen message="Loading cart" />
   }
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {

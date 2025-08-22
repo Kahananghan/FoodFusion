@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Star, MapPin, Plus, Minus } from 'lucide-react'
 import { addToCart as addToCartDB } from '@/utils/cart'
+import Loader from '@/components/Loader'
 import toast from 'react-hot-toast'
 
 interface MenuItem {
@@ -37,11 +38,14 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<{[key: string]: number}>({})
+  const [cartIds, setCartIds] = useState<{[key: string]: string}>({}) // map menuItemId -> cartItemId
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchRestaurant()
     fetchMenu()
+  // Load existing cart from server to sync counts
+  syncCartFromServer()
   }, [params.id])
 
   const fetchRestaurant = async () => {
@@ -90,6 +94,32 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
     setLoading(false)
   }
 
+  const syncCartFromServer = async () => {
+    try {
+      const res = await fetch('/api/cart')
+      if (!res.ok) return
+      const data = await res.json()
+      if (!data.success || !Array.isArray(data.cartItems)) return
+      // Build mappings for items of this restaurant
+      const newCart: {[k:string]: number} = {}
+      const newIds: {[k:string]: string} = {}
+      data.cartItems.forEach((ci: any) => {
+        // Attempt to match by name + restaurant name (case-insensitive)
+        const menuItem = menuItems.find(mi => mi.name === ci.name)
+        if (menuItem) {
+          newCart[menuItem.id] = ci.quantity || 0
+          newIds[menuItem.id] = ci._id
+        }
+      })
+      if (Object.keys(newCart).length) {
+        setCart(prev => ({ ...prev, ...newCart }))
+        setCartIds(prev => ({ ...prev, ...newIds }))
+      }
+    } catch (e) {
+      // silent
+    }
+  }
+
   const addToCart = async (itemId: string) => {
     const item = menuItems.find(m => m.id === itemId)
     if (!item) return
@@ -108,7 +138,9 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
           ...prev,
           [itemId]: (prev[itemId] || 0) + 1
         }))
-        window.dispatchEvent(new Event('cartUpdated'))
+  // Refresh cart to capture server cart item ID
+  setTimeout(() => syncCartFromServer(), 50)
+  window.dispatchEvent(new Event('cartUpdated'))
       }
     } catch (error: any) {
       if (error.message?.includes('Authentication required') || error.status === 401) {
@@ -121,16 +153,41 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   const removeFromCart = (itemId: string) => {
+    // NOTE: Avoid side-effects inside setState functional updater to prevent
+    // double execution under React Strict Mode (which caused duplicate toasts).
+    const current = cart[itemId] || 0
+    const newCount = Math.max(current - 1, 0)
+
     setCart(prev => {
-      const newCount = Math.max((prev[itemId] || 0) - 1, 0)
-      const newCart = { ...prev }
-      if (newCount === 0) {
-        delete newCart[itemId]
-      } else {
-        newCart[itemId] = newCount
-      }
-      return newCart
+      const updated = { ...prev }
+      if (newCount === 0) delete updated[itemId]; else updated[itemId] = newCount
+      return updated
     })
+
+    const cartItemId = cartIds[itemId]
+    if (cartItemId) {
+      if (newCount === 0) {
+        fetch(`/api/cart?id=${cartItemId}`, { method: 'DELETE' })
+          .then(res => {
+            if (res.ok) {
+              toast.success('Item removed from cart')
+            } else {
+              toast.error('Failed to remove item')
+            }
+            setCartIds(ids => { const copy = { ...ids }; delete copy[itemId]; return copy })
+            window.dispatchEvent(new Event('cartUpdated'))
+          })
+      } else {
+        fetch('/api/cart', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: cartItemId, quantity: newCount })
+        }).then(() => window.dispatchEvent(new Event('cartUpdated')))
+      }
+    } else {
+      // If we don't have ID yet, attempt a background sync
+      syncCartFromServer()
+    }
   }
 
 
@@ -145,12 +202,13 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
     }, 0)
   }
 
+  const getDeliveryFee = () => {
+    const subtotal = getTotalPrice()
+    return subtotal >= 500 ? 0 : 40
+  }
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading restaurant...</div>
-      </div>
-    )
+    return <Loader fullscreen message="Fetching delicious details" />
   }
 
   return (
@@ -279,15 +337,25 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-gray-600">Subtotal</span>
-                        <span className="font-semibold">₹{getTotalPrice()}</span>
+                        <span className="font-semibold text-primary">₹{getTotalPrice()}</span>
                       </div>
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-gray-600">Delivery Fee</span>
-                        <span className="font-semibold">₹40</span>
+                        {getDeliveryFee() === 0 ? (
+                          <span className="font-semibold text-green-600">FREE</span>
+                        ) : (
+                          <span className="font-semibold text-orange-600">₹{getDeliveryFee()}</span>
+                        )}
                       </div>
+                      {getTotalPrice() < 500 && (
+                        <div className="text-xs text-gray-500 mb-3">Add ₹{500 - getTotalPrice()} more for free delivery</div>
+                      )}
+                      {getTotalPrice() >= 500 && (
+                        <div className="text-xs text-green-600 mb-3 font-medium">🎉 You unlocked free delivery!</div>
+                      )}
                       <div className="border-t pt-3 flex justify-between items-center">
                         <span className="text-xl font-bold text-gray-800">Total</span>
-                        <span className="text-2xl font-bold text-primary">₹{getTotalPrice() + 40}</span>
+                        <span className="text-2xl font-bold text-primary">₹{getTotalPrice() + getDeliveryFee()}</span>
                       </div>
                     </div>
                     <a 

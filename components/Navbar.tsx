@@ -60,7 +60,7 @@ export default function Navbar() {
       const res = await fetch('/api/auth/logout', { method: 'POST' })
       if (res.ok) {
         authLogout()
-        toast.success('Logged out successfully')
+        toast.error('Logged out successfully') // red variant as requested
         router.push('/')
       }
     } catch (error) {

@@ -14,6 +14,8 @@ interface User {
     state: string
     zipCode: string
   }
+  createdAt?: string // ISO date string from backend (timestamps enabled)
+  updatedAt?: string
 }
 
 interface AuthContextType {

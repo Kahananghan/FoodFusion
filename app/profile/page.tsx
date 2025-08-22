@@ -2,19 +2,13 @@
 
 import { User, Mail, Phone, MapPin, Edit } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import Loader from '@/components/Loader'
 
 export default function Profile() {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    )
+    return <Loader fullscreen message="Loading profile" />
   }
 
   if (!user) {
@@ -47,10 +41,7 @@ export default function Profile() {
                 <div className="bg-primary/10 p-3 rounded-full">
                   <User className="h-8 w-8 text-primary" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{user.name}</h3>
-                  <p className="text-gray-600 capitalize">{user.role}</p>
-                </div>
+                  <h1 className="text-lg font-semibold text-gray-900">{user.name}</h1>
               </div>
 
               <div className="space-y-4">
@@ -92,11 +83,13 @@ export default function Profile() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Account Type</span>
-                  <span className="font-medium capitalize">{user.role}</span>
+                  <span className="capitalize text-gray-900">{user.role}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Member Since</span>
-                  <span className="font-medium">Recently</span>
+                  <span className="text-gray-900">
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status</span>

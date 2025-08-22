@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Star, Clock, MapPin, Search } from 'lucide-react'
+import Loader from '@/components/Loader'
 
 interface Restaurant {
   id: string
@@ -95,11 +96,7 @@ export default function RestaurantsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading restaurants...</div>
-      </div>
-    )
+    return <Loader fullscreen message="Exploring tasty places" />
   }
 
   return (

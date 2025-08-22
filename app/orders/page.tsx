@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, MapPin, Star } from 'lucide-react'
+import Loader from '@/components/Loader'
 
 interface Order {
   id: string
@@ -69,11 +70,7 @@ export default function OrdersPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading orders...</div>
-      </div>
-    )
+    return <Loader fullscreen message="Gathering your orders" />
   }
 
   return (

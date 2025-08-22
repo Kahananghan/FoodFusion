@@ -278,7 +278,7 @@ export default function SellerDashboard() {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' })
       if (res.ok) {
-        toast.success('Logged out successfully')
+        toast.error('Logged out successfully')
         window.location.href = '/'
       } else {
         toast.error('Logout failed')
