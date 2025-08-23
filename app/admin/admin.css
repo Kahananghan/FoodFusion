@@ -244,6 +244,12 @@
   to { transform: translateX(0); }
 }
 
+/* Smooth width grow for animated bars */
+@keyframes grow {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .stat-card {
