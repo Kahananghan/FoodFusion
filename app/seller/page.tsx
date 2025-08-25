@@ -243,8 +243,8 @@ export default function SellerDashboard() {
               {[
                 { id: 'overview', label: 'Overview', icon: BarChart3 },
                 { id: 'restaurant', label: 'Restaurant', icon: Store },
-                { id: 'menu', label: 'Menu', icon: ShoppingBag },
-                { id: 'orders', label: 'Orders', icon: Users },
+                { id: 'menu', label: 'Menu', icon: Store },
+                { id: 'orders', label: 'Orders', icon: ShoppingBag },
                 { id: 'reports', label: 'Reports', icon: TrendingUp }
               ].map(t => {
                 const Icon = t.icon
@@ -539,10 +539,10 @@ export default function SellerDashboard() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="orders">
+    <TabsContent value="orders">
               <Card className="border-gray-200/80 dark:border-gray-800/80 shadow-sm">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold tracking-wide">Orders</CardTitle>
+      <CardTitle className="text-sm font-semibold tracking-wide flex items-center gap-2">Order Actions <span className="text-[11px] font-normal text-gray-500">Track & update status</span></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {/* Summary Grid */}
@@ -591,7 +591,7 @@ export default function SellerDashboard() {
                     <div className="text-center py-10 text-muted-foreground text-sm border border-dashed rounded-lg bg-white/50 dark:bg-gray-900/30">No orders match filters</div>
                   ) : (
                     <div className="rounded-lg border overflow-auto max-h-[65vh]">
-                      <Table className="min-w-[760px]">
+                      <Table className="min-w-[880px]">
                         <TableHeader>
                           <TableRow className="bg-gray-50/80 sticky top-0 z-10">
                             <TableHead className="w-[200px]">Order # / Date</TableHead>
@@ -599,17 +599,25 @@ export default function SellerDashboard() {
                             <TableHead>Items</TableHead>
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">Status</TableHead>
+                            <TableHead className="text-right w-[220px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredOrders.map(order => {
                             const shortId = order.orderNumber || order._id.slice(-6)
                             const created = new Date(order.createdAt).toLocaleString()
+                            const status: string = order.status
+                            const stepOrder = ['pending','confirmed','preparing','ready','delivered']
+                            const currentIdx = stepOrder.indexOf(status)
+                            const progressPct = currentIdx >=0 ? ((currentIdx)/(stepOrder.length-1))*100 : 0
                             return (
                               <TableRow key={order._id} className="hover:bg-gray-50 transition">
                                 <TableCell className="font-medium align-top">
                                   #{shortId}
                                   <div className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{created}</div>
+                                  <div className="mt-2 h-1.5 rounded bg-gray-100 dark:bg-gray-800 overflow-hidden w-full">
+                                    <div className="h-full bg-green-500/70 transition-all" style={{width: progressPct + '%'}} />
+                                  </div>
                                 </TableCell>
                                 <TableCell className="align-top">
                                   <div className="text-xs font-medium leading-tight">{order.customer?.name || 'Customer'}</div>
@@ -623,6 +631,34 @@ export default function SellerDashboard() {
                                 </TableCell>
                                 <TableCell className="font-semibold text-right align-top whitespace-nowrap">₹{order.totalAmount}</TableCell>
                                 <TableCell className="text-right align-top"><StatusBadge status={order.status} /></TableCell>
+                                <TableCell className="text-right align-top whitespace-nowrap">
+                                  <div className="flex flex-wrap gap-1 justify-end">
+                                    {status==='pending' && (
+                                      <>
+                                        <Button size="sm" variant="outline" className="h-7 px-2 hover:bg-green-600" onClick={()=>handleOrderStatusUpdate(order._id,'confirmed')}>Confirm</Button>
+                                        <Button size="sm" variant="outline" className="h-7 px-2 border-red-200 text-red-600 hover:bg-red-600" onClick={()=>handleOrderStatusUpdate(order._id,'cancelled')}>Cancel</Button>
+                                      </>
+                                    )}
+                                    {status==='confirmed' && (
+                                      <>
+                                        <Button size="sm" variant="outline" className="h-7 px-2 hover:bg-green-600" onClick={()=>handleOrderStatusUpdate(order._id,'preparing')}>Start Prep</Button>
+                                        <Button size="sm" variant="outline" className="h-7 px-2 border-red-200 text-red-600 hover:bg-red-600" onClick={()=>handleOrderStatusUpdate(order._id,'cancelled')}>Cancel</Button>
+                                      </>
+                                    )}
+                                    {status==='preparing' && (
+                                      <Button size="sm" variant="outline" className="h-7 px-2 hover:bg-green-600" onClick={()=>handleOrderStatusUpdate(order._id,'ready')}>Mark Ready</Button>
+                                    )}
+                                    {status==='ready' && (
+                                      <span className="text-[10px] text-green-700 font-medium px-2 py-1 rounded-md bg-green-100 border border-green-200">Ready • awaiting delivery</span>
+                                    )}
+                                    {status==='delivered' && (
+                                      <span className="text-[10px] text-green-600 font-medium">Completed</span>
+                                    )}
+                                    {status==='cancelled' && (
+                                      <span className="text-[10px] text-red-600 font-medium">Cancelled</span>
+                                    )}
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             )
                           })}

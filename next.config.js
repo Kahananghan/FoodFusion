@@ -4,6 +4,7 @@ const nextConfig = {
     domains: [
       'res.cloudinary.com',
       'images.unsplash.com',
+  'plus.unsplash.com',
       'unsplash.com',
       'picsum.photos',
       'b.zmtcdn.com',

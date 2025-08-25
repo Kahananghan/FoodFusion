@@ -1,10 +1,10 @@
 "use client"
 import { useSidebar } from '@/components/ui/sidebar'
-import { BarChart3, Store, ShoppingBag, TrendingUp, UtensilsCrossed, LogOut, BadgeCheck, X } from 'lucide-react'
+import { Package, Truck, History, BarChart3, LogOut, BadgeCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as React from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup } from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 
 interface NavItem {
@@ -15,20 +15,19 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
-  { id: 'restaurant', label: 'Restaurant', icon: UtensilsCrossed },
-  { id: 'menu', label: 'Menu', icon: Store },
-  { id: 'orders', label: 'Orders', icon: ShoppingBag },
-  { id: 'reports', label: 'Reports', icon: TrendingUp }
+  { id: 'available', label: 'Available', icon: Package },
+  { id: 'my-orders', label: 'My Orders', icon: Truck },
+  { id: 'history', label: 'History', icon: History }
 ]
 
-interface SellerSidebarProps {
+interface DeliverySidebarProps {
   active: string
   onChange: (id: string) => void
   user?: { name: string; email?: string; avatar?: string; role?: string; createdAt?: string } | null
   onLogout?: () => void
 }
 
-export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSidebarProps) => {
+export const DeliverySidebar = ({ active, onChange, user, onLogout }: DeliverySidebarProps) => {
   const { open } = useSidebar()
   const [showAccount, setShowAccount] = React.useState(false)
 
@@ -38,14 +37,15 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [showAccount])
+
   return (
     <div className="flex h-screen flex-col">
-      <div className="flex items-center gap-2 h-14 px-3 border-b bg-gradient-to-r from-green-600 via-green-500/90 to-green-400 text-white shadow-sm">
+      <div className="flex items-center gap-2 h-14 px-3 border-b bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-400 text-white shadow-sm">
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/20 font-bold text-sm backdrop-blur">FF</div>
         {open && (
           <div className="flex flex-col justify-between">
             <span className="font-bold tracking-wide text-lg">FoodFusion</span>
-            <span className="text-sm text-gray-100">Seller</span>
+            <span className="text-sm text-indigo-100">Delivery</span>
           </div>
         )}
       </div>
@@ -53,7 +53,7 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
         <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-gray-500/70 dark:text-gray-400 uppercase">Dashboard</div>
         {navItems.map(item => {
           const Icon = item.icon
-            const isActive = active === item.id
+          const isActive = active === item.id
           return (
             <button
               key={item.id}
@@ -61,11 +61,11 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
               className={cn(
                 'group relative w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-green-600 text-white shadow ring-1 ring-green-300/50'
-                  : 'text-gray-700 hover:bg-green-50 hover:text-green-700 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
+                  ? 'bg-indigo-600 text-white shadow ring-1 ring-indigo-300/50'
+                  : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
               )}
             >
-              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-green-600 group-hover:text-green-700 dark:group-hover:text-green-400')} />
+              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-indigo-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400')} />
               {open && <span className="truncate">{item.label}</span>}
               {!open && (
                 <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
@@ -82,15 +82,15 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  'w-full flex items-center gap-3 rounded-md px-2 py-2 text-left transition group hover:bg-green-50 dark:hover:bg-gray-800/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60',
+                  'w-full flex items-center gap-3 rounded-md px-2 py-2 text-left transition group hover:bg-indigo-50 dark:hover:bg-gray-800/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60',
                   open ? 'justify-start' : 'justify-center'
                 )}
               >
-                <Avatar className={cn('h-9 w-9 rounded-lg ring-2 ring-green-300/60 dark:ring-green-800 shadow-sm bg-gradient-to-br from-green-500 to-green-600 text-white')}> 
+                <Avatar className={cn('h-9 w-9 rounded-lg ring-2 ring-indigo-300/70 dark:ring-indigo-700 shadow-sm bg-gradient-to-br from-indigo-500 to-indigo-600 text-white')}> 
                   {user.avatar ? (
                     <AvatarImage src={user.avatar} alt={user.name} />
                   ) : (
-                    <AvatarFallback className="rounded-lg from-green-500 to-green-600 bg-gradient-to-br text-white font-semibold">
+                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-semibold">
                       {user.name?.[0] || 'U'}
                     </AvatarFallback>
                   )}
@@ -117,29 +117,37 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side={open ? 'right' : 'right'} align="end" className="min-w-60 border border-green-100 dark:border-green-800/40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
+            <DropdownMenuContent side={open ? 'right' : 'right'} align="end" className="min-w-56">
               <DropdownMenuLabel className="p-0">
                 <div className="flex items-center gap-3 px-2 py-2">
-                  <Avatar className="h-10 w-10 rounded-lg ring-2 ring-green-300/70 dark:ring-green-700 bg-gradient-to-br from-green-500 to-green-600 text-white">
-                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : <AvatarFallback className="rounded-lg from-green-500 to-green-600 bg-gradient-to-br text-white font-semibold">{user.name?.slice(0,2) || 'US'}</AvatarFallback>}
+                  <Avatar className="h-10 w-10 rounded-lg ring-2 ring-indigo-300/70 dark:ring-indigo-700 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+                    {user.avatar ? (
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                    ) : (
+                      <AvatarFallback className="rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-semibold">{user.name?.slice(0,2) || 'US'}</AvatarFallback>
+                    )}
                   </Avatar>
                   <div className="text-sm leading-tight">
-                    <p className="font-medium truncate max-w-[150px] text-gray-700">{user.name}</p>
-                    {user.email && <p className="text-xs truncate max-w-[150px] text-gray-600">{user.email}</p>}
+                    <p className="font-medium truncate max-w-[150px]">{user.name}</p>
+                    {user.email && <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>}
                   </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-green-100 dark:bg-green-800/40" />
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="gap-2  hover:text-green-800 focus:text-green-800 dark:text-green-300 dark:hover:text-green-200 hover:bg-green-50 focus:bg-green-50 dark:hover:bg-green-900/30 dark:focus:bg-green-900/30 transition-colors" onClick={(e)=>{e.preventDefault(); setShowAccount(true)}}>
-                  <BadgeCheck className="h-4 w-4 " />
-                  <span className="font-medium">Account</span>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup className="bg-white dark:bg-gray-900/95 rounded-md">
+                <DropdownMenuItem
+                  className="gap-2 hover:bg-indigo-50 focus:bg-indigo-100 dark:hover:bg-indigo-900/40 dark:focus:bg-indigo-900/50 hover:text-indigo-700 focus:text-indigo-700 dark:hover:text-indigo-300 dark:focus:text-indigo-300 transition-colors"
+                  onClick={(e) => { e.preventDefault(); setShowAccount(true) }}
+                >
+                  <BadgeCheck className="h-4 w-4" />
+                  <span>Account</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator className="bg-green-100 dark:bg-green-800/40" />
+              <DropdownMenuSeparator />
               {onLogout && (
-                <DropdownMenuItem onClick={onLogout} className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-900/30">
-                  <LogOut className="h-4 w-4" /> Logout
+                <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-900/30" onClick={onLogout}>
+                  <LogOut className="h-4 w-4" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -149,20 +157,21 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
           {open && <span className="self-center text-[11px] text-muted-foreground">© {new Date().getFullYear()} FoodFusion</span>}
         </div>
       </div>
+
       {showAccount && user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0" onClick={() => setShowAccount(false)} />
           <div className="relative w-full max-w-sm mx-auto rounded-lg border bg-white dark:bg-gray-900 shadow-lg p-5 animate-in fade-in-0 zoom-in-95">
             <button
               onClick={() => setShowAccount(false)}
-              className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+              className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
               aria-label="Close account details"
             >
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-4 mb-4">
-              <Avatar className="h-14 w-14 rounded-lg ring-2 ring-green-300/60 dark:ring-green-800 bg-gradient-to-br from-green-500 to-green-600 text-white">
-                {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : <AvatarFallback className="rounded-lg text-base from-green-500 to-green-600 bg-gradient-to-br text-white font-semibold">{user.name?.slice(0,2) || 'US'}</AvatarFallback>}
+              <Avatar className="h-14 w-14 rounded-lg ring-2 ring-indigo-300/70 dark:ring-indigo-700 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+                {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : <AvatarFallback className="rounded-lg text-base bg-gradient-to-br from-indigo-500 to-indigo-600 text-white font-semibold">{user.name?.slice(0,2) || 'US'}</AvatarFallback>}
               </Avatar>
               <div className="min-w-0">
                 <p className="text-lg font-semibold leading-tight truncate">{user.name}</p>
@@ -184,7 +193,14 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
               )}
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" className="hover:bg-green-600 text-green-700 border-green-300" size="sm" onClick={() => setShowAccount(false)}>Close</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAccount(false)}
+                className="transition-colors border-indigo-300 text-indigo-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 dark:border-indigo-600/50 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white"
+              >
+                Close
+              </Button>
               {onLogout && (
                 <Button variant="destructive" size="sm" onClick={() => { setShowAccount(false); onLogout() }}>
                   <LogOut className="h-4 w-4 mr-1" /> Logout

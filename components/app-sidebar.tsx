@@ -197,7 +197,7 @@ export const AppSidebar = ({ active, onChange, user, onLogout }: AppSidebarProps
               )}
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAccount(false)}>Close</Button>
+              <Button variant="outline" className="text-orange-700 border-orange-300" size="sm" onClick={() => setShowAccount(false)}>Close</Button>
               {onLogout && (
                 <Button variant="destructive" size="sm" onClick={() => { setShowAccount(false); onLogout() }}>
                   <LogOut className="h-4 w-4 mr-1" /> Logout
