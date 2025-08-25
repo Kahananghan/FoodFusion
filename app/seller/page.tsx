@@ -313,6 +313,8 @@ export default function SellerDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+
                 {/* Top Items & Quick Actions */}
                 <div className="flex flex-col gap-6">
                   <Card className="border-gray-200/80 dark:border-gray-800/80 shadow-sm">
@@ -394,6 +396,7 @@ export default function SellerDashboard() {
                       </div>
                     </div>
                   </Card>
+
                   {/* Details Card */}
                   <Card className="border-gray-200/80 dark:border-gray-800/80 shadow-sm flex flex-col">
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="h-4 w-4 text-green-600" /> Details</CardTitle></CardHeader>
@@ -441,6 +444,7 @@ export default function SellerDashboard() {
                       <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={()=>setShowAddModal(true)}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
                     </div>
                   </div>
+
                   {/* Filters Row */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <div className="flex items-center gap-1 bg-white dark:bg-gray-900 border rounded-full px-2 py-1">
@@ -563,6 +567,7 @@ export default function SellerDashboard() {
                       <div className="text-[10px] text-gray-500">Avg ₹{deliveredOrders.length? Math.round(deliveredRevenue/deliveredOrders.length).toLocaleString():0}/order</div>
                     </div>
                   </div>
+                  
                   {/* Toolbar */}
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-3 items-center">
