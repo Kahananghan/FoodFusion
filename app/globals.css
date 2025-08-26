@@ -23,6 +23,7 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius: 0.5rem;
+  --seller-scrollbar-width: 2px; /* adjustable single source for seller scrollbar thickness */
 }
 
 .dark {
@@ -211,22 +212,46 @@ a {
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
+/* Default (main site) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: linear-gradient(180deg,#ffffff,#f5f7fa); border-radius: 12px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#ff8d5a,#ff6b35); border-radius: 12px; box-shadow: 0 0 0 1px #ffffff inset, 0 1px 2px rgba(0,0,0,0.18); border: 1px solid #ff824b; transition: background .25s, box-shadow .25s, border-color .25s; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg,#ff7733,#ff5514); border-color: #ff641f; box-shadow: 0 0 0 1px #ffffff inset, 0 2px 4px rgba(0,0,0,0.25); }
+::-webkit-scrollbar-thumb:active { background: linear-gradient(180deg,#ff6b35,#e14a0d); border-color: #d74306; }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
+/* Firefox base colors (applies where :root not overridden by themed panels) */
+html { scrollbar-width: thick; scrollbar-color: #ff6b35 #f5f7fa; }
+.dark html { scrollbar-color: #ff6b35 #1f2330; }
 
-::-webkit-scrollbar-thumb {
-  background: #ff6b35;
-  border-radius: 4px;
-}
+/* Dark mode base scrollbar*/
+.dark ::-webkit-scrollbar-track { background: #1f2330; }
+.dark ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#ff783f,#ff5a1d); border: 1px solid #ff662c; box-shadow: 0 0 0 1px #1f2330 inset, 0 1px 2px rgba(0,0,0,0.6); }
+.dark ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg,#ff641f,#e94d0b); border-color: #ff5611; box-shadow: 0 0 0 1px #1f2330 inset, 0 2px 4px rgba(0,0,0,0.65); }
+.dark ::-webkit-scrollbar-thumb:active { background: linear-gradient(180deg,#ff5611,#d63c00); border-color: #cf3600; }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #e55a2b;
-}
+/* Seller unified scrollbar (root themed AND component scoped) */
+.seller-theme,
+.seller-scrollbar { scrollbar-width: thin; scrollbar-color: #059669 #ecfdf5; }
+.dark.seller-theme,
+.dark .seller-scrollbar { scrollbar-color: #047857 #1f2937; }
+
+/* WebKit thickness */
+.seller-theme::-webkit-scrollbar,
+.seller-scrollbar::-webkit-scrollbar { width: var(--seller-scrollbar-width); height: var(--seller-scrollbar-width); }
+
+/* Track */
+.seller-theme::-webkit-scrollbar-track,
+.seller-scrollbar::-webkit-scrollbar-track { background: linear-gradient(to bottom, #ecfdf5, #f0fdfa); border-radius: 6px; }
+.dark.seller-theme::-webkit-scrollbar-track,
+.dark .seller-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+
+/* Thumb */
+.seller-theme::-webkit-scrollbar-thumb,
+.seller-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#10b981,#059669); border-radius: 6px; }
+.seller-theme::-webkit-scrollbar-thumb:hover,
+.seller-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg,#059669,#047857); }
+.dark.seller-theme::-webkit-scrollbar-thumb,
+.dark .seller-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#059669,#047857); }
 
 /* White scrollbar variant for delivery panel */
 .delivery-scroll-white {
@@ -276,6 +301,10 @@ a {
   background: #3730a3; /* indigo-800 */
   border-color: #312e81; /* indigo-900 */
 }
+
+
+/* (Removed legacy .seller-scrollbar * selectors to prevent specificity conflicts) */
+
 
 @media (prefers-color-scheme: dark) {
   html {

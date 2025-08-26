@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Login() {

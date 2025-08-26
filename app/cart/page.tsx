@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Minus, Trash2, MapPin } from 'lucide-react'
 import PaymentModal from '@/components/PaymentModal'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import Loader from '@/components/Loader'
 
 interface CartItem {

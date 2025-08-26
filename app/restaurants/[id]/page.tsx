@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Star, MapPin, Plus, Minus } from 'lucide-react'
 import { addToCart as addToCartDB } from '@/utils/cart'
 import Loader from '@/components/Loader'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 
 interface MenuItem {
   id: string

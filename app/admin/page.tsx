@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, BarChart3, TrendingUp, Clock, MapPin, IndianRupee, ArrowUpDown, ChevronUp, ChevronDown, EyeOff } from 'lucide-react'
+import { Users, Store, Truck, ShoppingBag, CheckCircle, XCircle, Eye, Search, BarChart3, TrendingUp, Clock, MapPin, IndianRupee, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
+import { DeliveryPerformanceChart } from '@/components/charts/DeliveryPerformanceChart'
+import { OrdersRevenueChart } from '@/components/charts/OrdersRevenueChart'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -15,7 +18,7 @@ import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset } from '@/compon
 import { AppSidebar } from '@/components/app-sidebar'
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import './admin.css'
 
 interface User {
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [orderView, setOrderView] = useState<'list' | 'earnings'>('list')
   const [userInfo, setUserInfo] = useState<{name: string, email: string} | null>(null)
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -96,6 +100,30 @@ export default function AdminDashboard() {
     completionRate: 0,
     totalRevenue: 0 // will always be recalculated from deliveryPartners
   })
+  // Entity view states
+  const [viewUser, setViewUser] = useState<User | null>(null)
+  const [viewRestaurant, setViewRestaurant] = useState<Restaurant | null>(null)
+  const [restaurantLiveStats, setRestaurantLiveStats] = useState<{totalOrders:number;revenue:number} | null>(null)
+  const [viewOrder, setViewOrder] = useState<Order | null>(null)
+  const [viewPartner, setViewPartner] = useState<DeliveryPartner | null>(null)
+  const formatDateTime = (d?: string) => d ? new Date(d).toLocaleString() : '—'
+  const relativeTime = (d?: string) => {
+    if(!d) return ''
+    const diff = Date.now() - new Date(d).getTime()
+    if (diff < 0) return 'just now'
+    const sec = Math.floor(diff/1000)
+    if (sec < 60) return sec + 's ago'
+    const min = Math.floor(sec/60)
+    if (min < 60) return min + 'm ago'
+    const hr = Math.floor(min/60)
+    if (hr < 24) return hr + 'h ago'
+    const day = Math.floor(hr/24)
+    if (day < 30) return day + 'd ago'
+    const mon = Math.floor(day/30)
+    if (mon < 12) return mon + 'mo ago'
+    const yr = Math.floor(mon/12)
+    return yr + 'y ago'
+  }
 
   useEffect(() => {
     fetchStats()
@@ -112,7 +140,7 @@ export default function AdminDashboard() {
     setUserPage(1); setRestaurantPage(1); setOrderPage(1); setPartnerPage(1)
   }, [activeTab])
 
-  // reset page when search/filter/pageSize changes
+                      {/* Removed stray rates paragraph misplaced earlier */}
   useEffect(() => { setUserPage(1); setRestaurantPage(1); setOrderPage(1); setPartnerPage(1) }, [searchTerm, filterStatus, pageSize])
 
   const clampPage = (page: number, total: number) => Math.min(Math.max(1, page), Math.max(1, total))
@@ -193,9 +221,9 @@ export default function AdminDashboard() {
         if (fetched.length) {
           const sum = fetched.reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0)
           const avg = sum / fetched.length
-          setStats(prev => ({ ...prev, avgOrderValue: Math.round(avg) }))
+          setStats(prev => ({ ...prev, avgOrderValue: Math.round(avg), totalRevenue: Math.round(sum) }))
         } else {
-          setStats(prev => ({ ...prev, avgOrderValue: 0 }))
+          setStats(prev => ({ ...prev, avgOrderValue: 0, totalRevenue: 0 }))
         }
       }
     } catch (error) {
@@ -213,8 +241,7 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (res.ok) {
         setDeliveryPartners(data.partners)
-        const totalRevenue = data.partners.reduce((sum: number, partner: any) => sum + (partner.earnings || 0), 0)
-        setStats(prev => ({ ...prev, totalRevenue }))
+  // Do not override totalRevenue here; it's derived from orders now
       }
     } catch (error) {
       toast.error('Failed to fetch delivery partners')
@@ -428,6 +455,27 @@ export default function AdminDashboard() {
     )
   }
 
+  // Fetch live restaurant stats when dialog opens (moved out of handleLogout; hooks must be top-level)
+  useEffect(() => {
+    let ignore = false
+    const load = async () => {
+      if (!viewRestaurant) { setRestaurantLiveStats(null); return }
+      try {
+        const res = await fetch('/api/admin/restaurants/stats?name=' + encodeURIComponent(viewRestaurant.name))
+        if (res.ok) {
+          const data = await res.json()
+          if(!ignore) setRestaurantLiveStats(data.stats)
+        } else {
+          if(!ignore) setRestaurantLiveStats(null)
+        }
+      } catch {
+        if(!ignore) setRestaurantLiveStats(null)
+      }
+    }
+    load()
+    return () => { ignore = true }
+  }, [viewRestaurant])
+
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' })
@@ -562,267 +610,22 @@ export default function AdminDashboard() {
     )
   }
 
-  // -------------------- Simple Inline Chart Data (Last 7 Days) --------------------
-  // Analytics control state
+  // Simplified analytics chart (bar style like delivery panel)
   const [analyticsRange, setAnalyticsRange] = useState<7 | 14 | 30>(7)
-  const [showOrdersSeries, setShowOrdersSeries] = useState(true)
-  const [showRevenueSeries, setShowRevenueSeries] = useState(true)
-  const chartContainerRef = useRef<HTMLDivElement | null>(null)
-  const [chartWidth, setChartWidth] = useState(600)
-  useEffect(() => {
-    const handle = () => {
-      if (chartContainerRef.current) {
-        setChartWidth(chartContainerRef.current.clientWidth)
-      }
-    }
-    handle()
-    window.addEventListener('resize', handle)
-    return () => window.removeEventListener('resize', handle)
-  }, [analyticsRange])
-
-  const today = new Date()
-  const startDate = new Date(today)
-  startDate.setDate(startDate.getDate() - (analyticsRange - 1))
-  const dayKey = (d: Date) => d.toISOString().slice(0,10)
-  const labels: string[] = []
+  const today = new Date(); today.setHours(0,0,0,0)
+  const start = new Date(today); start.setDate(start.getDate() - (analyticsRange - 1))
+  const rangeLabels: string[] = []
   for (let i = analyticsRange - 1; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    labels.push(dayKey(d))
+    const d = new Date(today); d.setDate(d.getDate() - i); rangeLabels.push(d.toISOString().slice(0,10))
   }
-  interface DayPoint { date: string; orders: number; revenue: number }
-  const baseMap: Record<string, DayPoint> = Object.fromEntries(labels.map(l => [l, { date: l, orders: 0, revenue: 0 }]))
-  orders.forEach(o => {
-    const created = new Date(o.createdAt)
-    if (created >= startDate && created <= today) {
-      const k = dayKey(created)
-      if (baseMap[k]) {
-        baseMap[k].orders += 1
-        baseMap[k].revenue += Number(o.total) || 0
-      }
-    }
-  })
-  const dailySeries = labels.map(l => baseMap[l])
-  const maxOrders = Math.max(1, ...dailySeries.map(d => d.orders))
-  const maxRevenue = Math.max(1, ...dailySeries.map(d => d.revenue))
-
-  const OrdersRevenueChart = () => {
-    const [hover, setHover] = useState<number | null>(null)
-  const w = Math.min(Math.max(chartWidth, 320), 1100); const h = analyticsRange === 30 ? 300 : 220; const pad = 42
-    const step = dailySeries.length > 1 ? (w - pad * 2) / (dailySeries.length - 1) : 0
-    const scaleYOrders = (v: number) => h - pad - (v / maxOrders) * (h - pad * 2)
-    const scaleYRevenue = (v: number) => h - pad - (v / maxRevenue) * (h - pad * 2)
-    const orderPoints = dailySeries.map((d, i) => [pad + i * step, scaleYOrders(d.orders)])
-    const revPoints = dailySeries.map((d, i) => [pad + i * step, scaleYRevenue(d.revenue)])
-    const line = (pts: number[][]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ')
-    const formatShort = (n: number) => {
-      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-      if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-      return n.toString()
-    }
-    // Catmull-Rom -> Bezier smoothing for longer ranges (30d)
-    const smoothPath = (pts: number[][]) => {
-      if (pts.length < 3) return line(pts)
-      let d = `M${pts[0][0]},${pts[0][1]}`
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i === 0 ? i : i - 1]
-        const p1 = pts[i]
-        const p2 = pts[i + 1]
-        const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1]
-        const tension = 0.25
-        const cp1x = p1[0] + (p2[0] - p0[0]) * tension
-        const cp1y = p1[1] + (p2[1] - p0[1]) * tension
-        const cp2x = p2[0] - (p3[0] - p1[0]) * tension
-        const cp2y = p2[1] - (p3[1] - p1[1]) * tension
-        d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`
-      }
-      return d
-    }
-    const revArea = () => {
-      if (!revPoints.length || !showRevenueSeries) return ''
-      const first = revPoints[0]; const last = revPoints[revPoints.length - 1]
-      return `${line(revPoints)} L ${last[0]},${h - pad} L ${first[0]},${h - pad} Z`
-    }
-    // Moving average (orders) for longer ranges
-    const showSMA = analyticsRange > 14 && showOrdersSeries
-    const smaWindow = 5
-    const smaPoints: number[][] = showSMA ? dailySeries.map((d, i) => {
-      const start = Math.max(0, i - Math.floor(smaWindow / 2))
-      const end = Math.min(dailySeries.length - 1, i + Math.floor(smaWindow / 2))
-      const slice = dailySeries.slice(start, end + 1)
-      const avg = slice.reduce((a,b)=>a+b.orders,0)/slice.length
-      return [orderPoints[i][0], scaleYOrders(avg)]
-    }) : []
-    const handleMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-      const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
-      const x = e.clientX - rect.left - pad
-      const idx = Math.round(x / step)
-      if (idx >= 0 && idx < dailySeries.length) setHover(idx)
-      else setHover(null)
-    }
-    const handleLeave = () => setHover(null)
-    const hoverPoint = hover != null ? dailySeries[hover] : null
-    const totalOrders = dailySeries.reduce((a,b)=>a+b.orders,0)
-    const totalRevenue = dailySeries.reduce((a,b)=>a+b.revenue,0)
-  const labelStride = analyticsRange === 30 ? 3 : analyticsRange <= 14 ? 1 : 2
-    const showBars = showOrdersSeries && analyticsRange <= 14
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <h4 className="text-xs font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400">Last {analyticsRange} Days</h4>
-          <div className="flex flex-wrap items-center gap-4 text-[11px] font-medium">
-            <TooltipProvider>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1">
-                        <Switch id="orders-toggle" checked={showOrdersSeries} onCheckedChange={(v)=>setShowOrdersSeries(Boolean(v))} />
-                        <label htmlFor="orders-toggle" className="text-xs font-medium cursor-pointer flex items-center gap-1 text-orange-600">{showOrdersSeries ? 'Orders' : <span className="flex items-center gap-1"><EyeOff className="h-3 w-3" /> Orders</span>}</label>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Toggle orders series</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1">
-                        <Switch id="revenue-toggle" checked={showRevenueSeries} onCheckedChange={(v)=>setShowRevenueSeries(Boolean(v))} />
-                        <label htmlFor="revenue-toggle" className="text-xs font-medium cursor-pointer flex items-center gap-1 text-sky-600">Revenue</label>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Toggle revenue series</TooltipContent>
-                  </Tooltip>
-                </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <ToggleGroup type="single" value={String(analyticsRange)} onValueChange={(v)=> v && setAnalyticsRange(Number(v) as 7|14|30)}>
-                        {['7','14','30'].map(r => (
-                          <ToggleGroupItem key={r} value={r}>{r}d</ToggleGroupItem>
-                        ))}
-                      </ToggleGroup>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Select range</TooltipContent>
-                </Tooltip>
-                {showSMA && <span className="text-[10px] text-gray-400">5d avg line</span>}
-              </div>
-            </TooltipProvider>
-          </div>
-        </div>
-        <div className="relative" ref={chartContainerRef}>
-          {hoverPoint && (
-            <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 md:left-auto md:right-2 md:translate-x-0 z-10">
-              <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-3 py-2 shadow-sm text-[11px] font-medium flex flex-col gap-0.5">
-                <span className="text-gray-500 dark:text-gray-400">{hoverPoint.date}</span>
-                {showOrdersSeries && <span className="text-orange-600 dark:text-orange-400">{hoverPoint.orders} orders</span>}
-                {showRevenueSeries && <span className="text-sky-600 dark:text-sky-400">₹{hoverPoint.revenue.toFixed(2)}</span>}
-                {showSMA && hover != null && <span className="text-gray-600 dark:text-gray-300">Avg ~{(() => { const p = smaPoints[hover]; if(!p) return '-'; // invert scale to value
-                  const yVal = ((h - pad) - (p[1] - (pad))) / (h - pad * 2) * maxOrders; return Math.round(yVal)
-                })()} orders</span>}
-              </div>
-            </div>
-          )}
-          <svg
-            viewBox={`0 0 ${w} ${h}`}
-            role="img"
-            aria-label="Chart showing orders and revenue trends"
-            className="w-full max-w-full select-none"
-            onMouseMove={handleMove}
-            onMouseLeave={handleLeave}
-          >
-            <defs>
-              <linearGradient id="revGradient" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="rgba(14,165,233,0.45)" />
-                <stop offset="100%" stopColor="rgba(14,165,233,0)" />
-              </linearGradient>
-              <linearGradient id="ordGradient" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="#fb923c" />
-                <stop offset="100%" stopColor="#ea580c" />
-              </linearGradient>
-              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            {/* Horizontal grid */}
-            {Array.from({ length: 4 }).map((_, i) => {
-              const y = pad + ((h - pad * 2) / 3) * i
-              return <line key={i} x1={pad} x2={w - pad} y1={y} y2={y} className="stroke-gray-200 dark:stroke-gray-800" strokeWidth={1} strokeDasharray="4 4" />
-            })}
-            {/* Bars for orders (short ranges only) */}
-            {showBars && orderPoints.map((p, i) => {
-              const barW = Math.max(6, step * 0.4)
-              const x = p[0] - barW / 2
-              const y = p[1]
-              const hBar = (h - pad) - y
-              return <rect key={i} x={x} y={y} width={barW} height={hBar} rx={2} className="fill-orange-400/60 dark:fill-orange-500/50 hover:fill-orange-500 transition" />
-            })}
-            {/* Revenue area & line */}
-            {showRevenueSeries && <path d={revArea()} fill="url(#revGradient)" />}
-            {showRevenueSeries && (
-              <path
-                d={analyticsRange === 30 ? smoothPath(revPoints) : line(revPoints)}
-                fill="none"
-                stroke="#0ea5e9"
-                strokeWidth={2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            )}
-            {/* Orders line over bars */}
-            {showOrdersSeries && (
-              <path
-                d={analyticsRange === 30 ? smoothPath(orderPoints) : line(orderPoints)}
-                fill="none"
-                stroke="url(#ordGradient)"
-                strokeWidth={2.2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                filter="url(#glow)"
-              />
-            )}
-            {/* Orders SMA line */}
-            {showSMA && <path d={line(smaPoints)} fill="none" stroke="#9ca3af" strokeWidth={2} strokeDasharray="5 4" strokeLinecap="round" />}
-            {/* Axes labels */}
-            {dailySeries.map((d, i) => (i % labelStride === 0 || i === dailySeries.length - 1) && (
-              <g key={d.date}>
-                <text x={pad + i * step} y={h - pad + 14} textAnchor="middle" className="fill-gray-400 dark:fill-gray-600 font-medium" fontSize={9}>{d.date.slice(5).replace('-', '/')}</text>
-              </g>
-            ))}
-            {/* Y-axis ticks (orders left) */}
-            {Array.from({length:4}).map((_,i)=>{
-              const v = (maxOrders/3)*i
-              const y = scaleYOrders(v)
-              return <text key={'ol'+i} x={pad-6} y={y+4} textAnchor="end" className="fill-orange-500/70 dark:fill-orange-300 font-medium" fontSize={9}>{i===0?0:Math.round(v)}</text>
-            })}
-            {/* Y-axis ticks (revenue right) */}
-            {Array.from({length:4}).map((_,i)=>{
-              const v = (maxRevenue/3)*i
-              const y = scaleYRevenue(v)
-              return <text key={'rl'+i} x={w-pad+6} y={y+4} textAnchor="start" className="fill-sky-600/70 dark:fill-sky-300 font-medium" fontSize={9}>{i===0?0:formatShort(Math.round(v))}</text>
-            })}
-            {/* Hover marker */}
-            {hover != null && (
-              <g>
-                <line x1={orderPoints[hover][0]} x2={orderPoints[hover][0]} y1={pad - 4} y2={h - pad + 4} stroke="#fb923c" strokeDasharray="4 4" strokeWidth={1} />
-                {showOrdersSeries && <circle cx={orderPoints[hover][0]} cy={orderPoints[hover][1]} r={5} fill="#fff" stroke="#fb923c" strokeWidth={2} />}
-                {showRevenueSeries && <circle cx={revPoints[hover][0]} cy={revPoints[hover][1]} r={5} fill="#0ea5e9" stroke="#fff" strokeWidth={2} />}
-              </g>
-            )}
-          </svg>
-        </div>
-        <div className="grid grid-cols-3 gap-4 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-          <div className="flex flex-col gap-0.5"><span>Total Orders</span><span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{totalOrders}</span></div>
-          <div className="flex flex-col gap-0.5"><span>Avg / Day</span><span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{(totalOrders / dailySeries.length).toFixed(1)}</span></div>
-          <div className="flex flex-col gap-0.5"><span>{analyticsRange}d Revenue</span><span className="text-sm font-semibold text-gray-800 dark:text-gray-200">₹{totalRevenue.toFixed(0)}</span></div>
-        </div>
-      </div>
-    )
-  }
+  const rangeMap: Record<string,{date:string; orders:number; revenue:number}> = Object.fromEntries(rangeLabels.map(l=>[l,{date:l,orders:0,revenue:0}]))
+  orders.forEach(o=>{ const dt=new Date(o.createdAt); if(dt>=start && dt<=today) { const k=dt.toISOString().slice(0,10); if(rangeMap[k]) { rangeMap[k].orders+=1; rangeMap[k].revenue+= Number(o.total)||0 } } })
+  const dailySeries = rangeLabels.map(l=>rangeMap[l])
+  // shape for OrdersRevenueChart
+  const ordersRevenueData = dailySeries.map(d => ({ date: d.date, orders: d.orders, revenue: d.revenue }))
+  const barData = dailySeries.map(d=>({ date: d.date, delivered: d.orders }))
+  const totalOrdersRange = dailySeries.reduce((a,b)=>a+b.orders,0)
+  const totalRevenueRange = dailySeries.reduce((a,b)=>a+b.revenue,0)
 
   return (
     <SidebarProvider>
@@ -921,12 +724,11 @@ export default function AdminDashboard() {
                         <li className="flex items-center justify-between"><span className="flex items-center gap-1">Completion Rate</span><span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[11px] font-semibold">{stats.completionRate}%</span></li>
                       </ul>
                       <div className="mt-5 grid grid-cols-2 gap-3">
-                        <Button size="sm" variant="outline" className="border-yellow-300/60 bg-yellow-50 hover:bg-yellow-100 text-yellow-700" onClick={() => setActiveTab('restaurants')} aria-label="Review restaurant applications">Review Apps</Button>
-                        <Button size="sm" variant="outline" className="border-green-300/60 bg-green-50 hover:bg-green-100 text-green-700" onClick={() => setActiveTab('delivery')} aria-label="Manage delivery partners">Manage Partners</Button>
-                        <Button size="sm" variant="outline" className="col-span-2 border-blue-300/60 bg-blue-50 hover:bg-blue-100 text-blue-700" onClick={() => setActiveTab('orders')} aria-label="View orders">View Orders</Button>
+                        <Button size="sm" variant="outline" className="border-yellow-300/60 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-700" onClick={() => setActiveTab('restaurants')} aria-label="Review restaurant applications">Review Apps</Button>
+                        <Button size="sm" variant="outline" className="border-green-300/60 bg-green-50 hover:bg-green-100 hover:text-green-700 text-green-700" onClick={() => setActiveTab('delivery')} aria-label="Manage delivery partners">Manage Partners</Button>
+                        <Button size="sm" variant="outline" className="col-span-2 border-blue-300/60 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 text-blue-700" onClick={() => setActiveTab('orders')} aria-label="View orders">View Orders</Button>
                       </div>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-4">Client-side approximations. For authoritative analytics export full report.</p>
                   </div>
                 </CardContent>
               </Card>
@@ -945,16 +747,13 @@ export default function AdminDashboard() {
                     <p className="mt-1 text-xs text-green-600 flex items-center gap-1 font-medium" aria-label="Revenue growth 18 percent"><TrendingUp className="h-3 w-3" /> +18% growth</p>
                   </div>
                   {(() => {
-                    // Simple illustrative split; in a real app pull from API
                     const total = stats.totalRevenue || 1
-                    const platformFees = Math.round(total * 0.12)
-                    const deliveryEarnings = Math.round(total * 0.35)
-                    const partnerShare = Math.round(total * 0.38)
-                    const other = Math.max(0, total - (platformFees + deliveryEarnings + partnerShare))
+                    const platformFees = Math.round(total * 0.05)
+                    const deliveryShare = Math.round(total * 0.30)
+                    const other = Math.max(0, total - (platformFees + deliveryShare))
                     const segments: { label: string; value: number; colors: string }[] = [
-                      { label: 'Platform Fees', value: platformFees, colors: 'from-orange-400 to-orange-600' },
-                      { label: 'Delivery Earnings', value: deliveryEarnings, colors: 'from-green-400 to-green-600' },
-                      { label: 'Partner Share', value: partnerShare, colors: 'from-purple-400 to-purple-600' },
+                      { label: 'Platform (5%)', value: platformFees, colors: 'from-orange-400 to-orange-600' },
+                      { label: 'Delivery (30%)', value: deliveryShare, colors: 'from-green-400 to-green-600' },
                       { label: 'Other', value: other, colors: 'from-sky-400 to-sky-600' }
                     ]
                     return (
@@ -977,7 +776,7 @@ export default function AdminDashboard() {
                   })()}
                   <div className="flex gap-2">
                     <Button size="sm" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white shadow" aria-label="Download revenue report">Download Report</Button>
-                    <Button size="sm" variant="outline" className="flex-1 border-orange-300/60 text-orange-700 hover:bg-orange-50" aria-label="Export detailed analytics" onClick={() => setActiveTab('orders')}>Detailed View</Button>
+                    <Button size="sm" variant="outline" className="flex-1 border-orange-300/60 hover:text-orange-700 text-orange-700 hover:bg-orange-50" aria-label="Export detailed analytics" onClick={() => setActiveTab('orders')}>Detailed View</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1063,11 +862,14 @@ export default function AdminDashboard() {
                     <TableCell>
                       <StatusBadge color={user.isActive ? 'green' : 'red'}>{user.isActive ? 'Active' : 'Inactive'}</StatusBadge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:text-blue-700 hover:bg-blue-100" onClick={() => setViewUser(user)}>
+                        <Eye className="h-4 w-4 mr-1" /> View
+                      </Button>
                       <Button
                         size="sm"
                         variant={user.isActive ? 'outline' : 'default'}
-                        className={user.isActive ? 'text-red-600 border-red-200 hover:bg-red-50' : 'bg-green-600 hover:opacity-90'}
+                        className={user.isActive ? 'text-red-600 hover:text-red-600 border-red-200 hover:bg-red-100' : 'bg-green-600 hover:opacity-90'}
                         onClick={() => handleUserStatusToggle(user._id, user.isActive)}
                       >
                         {user.isActive ? 'Deactivate' : 'Activate'}
@@ -1167,7 +969,7 @@ export default function AdminDashboard() {
                           </Button>
                         </>
                       )}
-                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:text-blue-700 hover:bg-blue-100" onClick={() => setViewRestaurant(restaurant)}>
                         <Eye className="h-4 w-4 mr-1" /> View
                       </Button>
                     </TableCell>
@@ -1184,6 +986,20 @@ export default function AdminDashboard() {
             <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b">
               <h2 className="text-lg font-semibold">Order Management</h2>
               <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex items-center rounded-md overflow-hidden border border-orange-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setOrderView('list')}
+                    className={`px-3 py-1.5 text-xs font-medium transition ${orderView === 'list' ? 'bg-orange-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-gray-700'}`}
+                    aria-pressed={orderView==='list'}
+                  >Orders</button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderView('earnings')}
+                    className={`px-3 py-1.5 text-xs font-medium transition ${orderView === 'earnings' ? 'bg-orange-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-gray-700'}`}
+                    aria-pressed={orderView==='earnings'}
+                  >Earnings</button>
+                </div>
                 <SearchBar placeholder="Search orders..." />
                 <StatusSelect
                   value={filterStatus}
@@ -1208,6 +1024,7 @@ export default function AdminDashboard() {
                 </select>
               </div>
             </div>
+            {orderView === 'list' && (
             <div className="relative rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-auto max-h-[65vh]">
       <Table>
               <TableHeader>
@@ -1291,7 +1108,7 @@ export default function AdminDashboard() {
                             { value: 'cancelled', label: 'Cancelled' }
                           ]}
                         />
-                        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                        <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:text-blue-700 hover:bg-blue-100" onClick={() => setViewOrder(order)}>
                           <Eye className="h-4 w-4 mr-1" /> View
                         </Button>
                       </TableCell>
@@ -1302,6 +1119,85 @@ export default function AdminDashboard() {
             </Table>
             <PageControls page={orderPaginated.current} totalPages={orderPaginated.totalPages} onChange={setOrderPage} />
             </div>
+            )}
+            {orderView === 'earnings' && (
+              <div className="p-6 space-y-6">
+                {(() => {
+                  const totalRevenue = filteredOrders.reduce((s,o)=>s + (Number(o.total)||0),0)
+                  const platformRate = 0.05
+                  const deliveryRate = 0.30
+                  const platform = Math.round(totalRevenue * platformRate)
+                  const delivery = Math.round(totalRevenue * deliveryRate)
+                  const other = Math.max(0, totalRevenue - (platform + delivery))
+                  const blocks = [
+                    { label: 'Total Revenue', value: totalRevenue, colors: 'from-orange-400 to-orange-600' },
+                    { label: 'Platform (5%)', value: platform, colors: 'from-amber-400 to-amber-600' },
+                    { label: 'Delivery (30%)', value: delivery, colors: 'from-green-400 to-green-600' },
+                    { label: 'Other', value: other, colors: 'from-sky-400 to-sky-600' }
+                  ]
+                  const byRestaurant: Record<string,{restaurant:string;orders:number;revenue:number}> = {}
+                  filteredOrders.forEach(o=>{
+                    const r = o.restaurant?.name || 'Unknown'
+                    if(!byRestaurant[r]) byRestaurant[r] = { restaurant: r, orders:0, revenue:0 }
+                    byRestaurant[r].orders += 1
+                    byRestaurant[r].revenue += Number(o.total)||0
+                  })
+                  const restRows = Object.values(byRestaurant).sort((a,b)=>b.revenue-a.revenue)
+                  return (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                        {blocks.map(b => (
+                          <div key={b.label} className="p-4 rounded-lg border bg-gradient-to-br text-xs font-medium shadow-sm border-gray-200 dark:border-gray-800 from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">{b.label}</div>
+                            <div className="text-lg font-semibold tabular-nums">₹{b.value.toLocaleString()}</div>
+                            {b.label !== 'Total Revenue' && totalRevenue>0 && (
+                              <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                                <div className={`h-full bg-gradient-to-r ${b.colors}`} style={{ width: ((b.value/totalRevenue)*100).toFixed(2)+'%' }} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-semibold">Restaurant</th>
+                              <th className="text-left px-3 py-2 font-semibold">Orders</th>
+                              <th className="text-left px-3 py-2 font-semibold">Revenue</th>
+                              <th className="text-left px-3 py-2 font-semibold">Platform (5%)</th>
+                              <th className="text-left px-3 py-2 font-semibold">Delivery (30%)</th>
+                              <th className="text-left px-3 py-2 font-semibold">Other</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {restRows.length === 0 && (
+                              <tr><td colSpan={6} className="text-center py-6 text-xs text-muted-foreground">No order data</td></tr>
+                            )}
+                            {restRows.map(r => {
+                              const pf = r.revenue * platformRate
+                              const dl = r.revenue * deliveryRate
+                              const oth = Math.max(0, r.revenue - (pf + dl))
+                              return (
+                                <tr key={r.restaurant} className="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-900 dark:even:bg-gray-800/60">
+                                  <td className="px-3 py-2 font-medium">{r.restaurant}</td>
+                                  <td className="px-3 py-2 tabular-nums">{r.orders}</td>
+                                  <td className="px-3 py-2 tabular-nums">₹{r.revenue.toFixed(2)}</td>
+                                  <td className="px-3 py-2 tabular-nums text-orange-600">₹{pf.toFixed(2)}</td>
+                                  <td className="px-3 py-2 tabular-nums text-green-600">₹{dl.toFixed(2)}</td>
+                                  <td className="px-3 py-2 tabular-nums text-sky-600">₹{oth.toFixed(2)}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500">Rates used: Platform 5%, Delivery 30%. Remaining classified as Other.</p>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
   </TabsContent>
 
         {/* Delivery Partners Tab */}
@@ -1396,7 +1292,7 @@ export default function AdminDashboard() {
                           { value: 'offline', label: 'Offline' }
                         ]}
                       />
-                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                      <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:text-blue-700 hover:bg-blue-100" onClick={() => setViewPartner(partner)}>
                         <Eye className="h-4 w-4 mr-1" /> View
                       </Button>
                     </TableCell>
@@ -1412,25 +1308,191 @@ export default function AdminDashboard() {
         <TabsContent value="analytics" className="space-y-6">
           <div className="grid gap-6">
             <Card className="border-gray-200/80 dark:border-gray-800/80 shadow-sm bg-white/70 dark:bg-gray-950/40 backdrop-blur">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3 flex-wrap">
                 <CardTitle className="text-sm font-semibold tracking-wide flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-orange-600" /> Orders & Revenue
                 </CardTitle>
-                <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                  <span className="hidden sm:inline">Last {analyticsRange} days</span>
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:block text-[11px] font-medium text-gray-500 dark:text-gray-400">Last {analyticsRange} days</div>
+                  <ToggleGroup
+                    type="single"
+                    value={String(analyticsRange)}
+                    onValueChange={(v) => v && setAnalyticsRange(Number(v) as 7 | 14 | 30)}
+                    className="h-8 flex rounded-md border border-orange-200 dark:border-gray-700 bg-orange-50/50 dark:bg-gray-800/50 backdrop-blur-sm p-0.5 text-[11px]"
+                  >
+                    <ToggleGroupItem
+                      value="7"
+                      className="px-2 h-7 data-[state=on]:bg-white data-[state=on]:text-orange-600 data-[state=on]:shadow-sm rounded-sm"
+                      aria-label="Show last 7 days"
+                    >7d</ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="14"
+                      className="px-2 h-7 data-[state=on]:bg-white data-[state=on]:text-orange-600 data-[state=on]:shadow-sm rounded-sm"
+                      aria-label="Show last 14 days"
+                    >14d</ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="30"
+                      className="px-2 h-7 data-[state=on]:bg-white data-[state=on]:text-orange-600 data-[state=on]:shadow-sm rounded-sm"
+                      aria-label="Show last 30 days"
+                    >30d</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
               </CardHeader>
               <CardContent className="pt-4">
                 {orders.length === 0 ? (
                   <div className="text-xs text-muted-foreground py-10 text-center">No order data yet to visualize</div>
                 ) : (
-                  <OrdersRevenueChart />
+                  <OrdersRevenueChart data={ordersRevenueData} />
+                )}
+                {orders.length > 0 && (
+                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px]">
+                    <div className="p-3 rounded-md bg-gradient-to-br from-orange-50 via-white to-white dark:from-orange-950/30 dark:via-gray-950 dark:to-gray-950 border border-orange-100 dark:border-orange-900/40">
+                      <div className="font-medium text-gray-500 dark:text-gray-400">Orders</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{totalOrdersRange}</div>
+                    </div>
+                    <div className="p-3 rounded-md bg-gradient-to-br from-indigo-50 via-white to-white dark:from-indigo-950/30 dark:via-gray-950 dark:to-gray-950 border border-indigo-100 dark:border-indigo-900/40">
+                      <div className="font-medium text-gray-500 dark:text-gray-400">Revenue</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">₹{totalRevenueRange.toLocaleString()}</div>
+                    </div>
+                    <div className="p-3 rounded-md bg-gradient-to-br from-green-50 via-white to-white dark:from-green-950/30 dark:via-gray-950 dark:to-gray-950 border border-green-100 dark:border-green-900/40 hidden sm:block">
+                      <div className="font-medium text-gray-500 dark:text-gray-400">Avg Order Value</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">₹{(totalRevenueRange / (totalOrdersRange || 1)).toFixed(2)}</div>
+                    </div>
+                    <div className="p-3 rounded-md bg-gradient-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-gray-950 dark:to-gray-950 border border-purple-100 dark:border-purple-900/40 hidden sm:block">
+                      <div className="font-medium text-gray-500 dark:text-gray-400">Orders / Day</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{(totalOrdersRange / analyticsRange).toFixed(1)}</div>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
           </Tabs>
+          {/* View Dialogs */}
+          <Dialog open={!!viewUser} onOpenChange={(o)=>{ if(!o) setViewUser(null) }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>User Details</DialogTitle>
+                {viewUser && <DialogDescription>Insights & actions for {viewUser.name}</DialogDescription>}
+              </DialogHeader>
+              {viewUser && (
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-muted-foreground">Name</p><p className="font-medium">{viewUser.name}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Email</p><p className="font-medium break-all">{viewUser.email}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Role</p><div className="mt-0.5"><StatusBadge color={viewUser.role === 'admin' ? 'red' : viewUser.role === 'restaurant' ? 'blue' : viewUser.role === 'delivery' ? 'green' : 'gray'}>{viewUser.role}</StatusBadge></div></div>
+                    <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-0.5"><StatusBadge color={viewUser.isActive ? 'green' : 'red'}>{viewUser.isActive ? 'Active' : 'Inactive'}</StatusBadge></div></div>
+                    <div><p className="text-xs text-muted-foreground">Joined</p><p className="font-medium">{formatDateTime(viewUser.createdAt)}</p></div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Last Login</p>
+                      <p className="font-medium">{viewUser.lastLogin ? formatDateTime(viewUser.lastLogin) : 'Never'}</p>
+                      {viewUser.lastLogin && <p className="text-[11px] text-gray-500 dark:text-gray-400">{relativeTime(viewUser.lastLogin)}</p>}
+                    </div>
+                  </div>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+                    <Button variant="outline" onClick={()=> setViewUser(null)}>Close</Button>
+                    <Button
+                      variant={viewUser.isActive ? 'destructive' : 'default'}
+                      onClick={()=> { handleUserStatusToggle(viewUser._id, viewUser.isActive); setViewUser(null) }}
+                    >{viewUser.isActive ? 'Deactivate User' : 'Activate User'}</Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!viewRestaurant} onOpenChange={(o)=>{ if(!o) setViewRestaurant(null) }}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Restaurant Details</DialogTitle>
+                {viewRestaurant && <DialogDescription>Application & performance for {viewRestaurant.name}</DialogDescription>}
+              </DialogHeader>
+              {viewRestaurant && (
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-muted-foreground">Name</p><p className="font-medium">{viewRestaurant.name}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Owner</p><p className="font-medium">{viewRestaurant.owner.name}</p></div>
+                    <div className="col-span-2"><p className="text-xs text-muted-foreground">Owner Email</p><p className="font-medium break-all">{viewRestaurant.owner.email}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Cuisine</p><p className="font-medium">{Array.isArray(viewRestaurant.cuisine) ? (viewRestaurant.cuisine.join(', ') || '—') : (viewRestaurant.cuisine || '—')}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Rating</p><p className="font-medium">{viewRestaurant.rating ?? '—'}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Orders</p><p className="font-medium">{restaurantLiveStats ? restaurantLiveStats.totalOrders : (viewRestaurant.totalOrders ?? 0)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Revenue</p><p className="font-medium">₹{(restaurantLiveStats ? restaurantLiveStats.revenue : (viewRestaurant.revenue || 0)).toLocaleString()}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-0.5"><StatusBadge color={viewRestaurant.status === 'approved' ? 'green' : viewRestaurant.status === 'rejected' ? 'red' : 'yellow'}>{viewRestaurant.status}</StatusBadge></div></div>
+                    <div><p className="text-xs text-muted-foreground">Applied</p><p className="font-medium">{formatDateTime(viewRestaurant.createdAt)}</p></div>
+                  </div>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+                    <Button variant="outline" onClick={()=> setViewRestaurant(null)}>Close</Button>
+                    {viewRestaurant.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <Button variant="default" onClick={()=> { handleRestaurantApproval(viewRestaurant._id, 'approved'); setViewRestaurant(null) }}>Approve</Button>
+                        <Button variant="destructive" onClick={()=> { handleRestaurantApproval(viewRestaurant._id, 'rejected'); setViewRestaurant(null) }}>Reject</Button>
+                      </div>
+                    )}
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!viewOrder} onOpenChange={(o)=>{ if(!o) setViewOrder(null) }}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Order Details</DialogTitle>
+                {viewOrder && <DialogDescription>Lifecycle & assignment for order #{viewOrder.orderNumber}</DialogDescription>}
+              </DialogHeader>
+              {viewOrder && (
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-muted-foreground">Order #</p><p className="font-medium">#{viewOrder.orderNumber}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-0.5"><StatusBadge color={
+                      viewOrder.status === 'delivered' ? 'green' :
+                      viewOrder.status === 'cancelled' ? 'red' :
+                      viewOrder.status === 'preparing' ? 'yellow' :
+                      viewOrder.status === 'ready' ? 'purple' :
+                      viewOrder.status === 'out-for-delivery' ? 'blue' :
+                      viewOrder.status === 'confirmed' ? 'indigo' : 'gray'
+                    }>{viewOrder.status === 'out-for-delivery' ? 'Out for Delivery' : viewOrder.status}</StatusBadge></div></div>
+                    <div><p className="text-xs text-muted-foreground">Placed</p><p className="font-medium">{formatDateTime(viewOrder.createdAt)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Total</p><p className="font-medium">₹{viewOrder.total.toFixed(2)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Customer</p><p className="font-medium">{viewOrder.customer?.name || '—'}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Customer Email</p><p className="font-medium break-all">{viewOrder.customer?.email || '—'}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Restaurant</p><p className="font-medium">{viewOrder.restaurant?.name || '—'}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Delivery Partner</p><p className="font-medium">{viewOrder.deliveryPartner?.name || 'Unassigned'}</p></div>
+                  </div>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+                    <Button variant="outline" onClick={()=> setViewOrder(null)}>Close</Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!viewPartner} onOpenChange={(o)=>{ if(!o) setViewPartner(null) }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Delivery Partner Details</DialogTitle>
+                {viewPartner && <DialogDescription>Profile & performance for {viewPartner.name}</DialogDescription>}
+              </DialogHeader>
+              {viewPartner && (
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-muted-foreground">Name</p><p className="font-medium">{viewPartner.name}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Email</p><p className="font-medium break-all">{viewPartner.email}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Phone</p><p className="font-medium">{viewPartner.phone}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-0.5"><StatusBadge color={viewPartner.status === 'available' ? 'green' : viewPartner.status === 'busy' ? 'yellow' : 'red'}>{viewPartner.status}</StatusBadge></div></div>
+                    <div><p className="text-xs text-muted-foreground">Rating</p><p className="font-medium">{viewPartner.rating}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Deliveries</p><p className="font-medium">{viewPartner.totalDeliveries}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Earnings</p><p className="font-medium">₹{(typeof viewPartner.earnings === 'number' ? viewPartner.earnings : 0).toFixed(2)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Location</p><p className="font-medium">{(viewPartner.location && typeof viewPartner.location.lat === 'number' && typeof viewPartner.location.lng === 'number') ? `${viewPartner.location.lat.toFixed(3)}, ${viewPartner.location.lng.toFixed(3)}` : '—'}</p></div>
+                  </div>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+                    <Button variant="outline" onClick={()=> setViewPartner(null)}>Close</Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </main>
       </SidebarInset>
     </SidebarProvider>

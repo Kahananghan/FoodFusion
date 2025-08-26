@@ -1,4 +1,4 @@
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 
 export interface CartItem {
   name: string

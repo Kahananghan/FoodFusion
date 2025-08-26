@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapPin, Clock, Package, Truck, BarChart3, History, Navigation, IndianRupee, Star, TrendingUp } from 'lucide-react'
 import { DeliveryPerformanceChart } from '@/components/charts/DeliveryPerformanceChart'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 import { DeliverySidebar } from '@/components/delivery-sidebar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -52,6 +52,8 @@ export default function DeliveryDashboard() {
   const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([])
   const [myOrders, setMyOrders] = useState<DeliveryOrder[]>([])
   const [deliveryHistory, setDeliveryHistory] = useState<DeliveryOrder[]>([])
+  // track all unique order IDs that have been exposed in the available list (offer exposures)
+  const exposuresRef = useRef<Set<string>>(new Set())
   // Available orders UI controls
   const [availableSearch, setAvailableSearch] = useState('')
   // single sorting (by amount) with direction toggle
@@ -71,6 +73,16 @@ export default function DeliveryDashboard() {
     fetchMyOrders()
     fetchStats()
     fetchUserInfo()
+    // Load persisted exposures from previous sessions for overall acceptance rate
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('delivery_exposures')
+        if (raw) {
+          const arr: string[] = JSON.parse(raw)
+          exposuresRef.current = new Set(arr)
+        }
+      }
+    } catch {}
   }, [])
 
   const fetchUserInfo = async () => {
@@ -90,7 +102,11 @@ export default function DeliveryDashboard() {
       const res = await fetch('/api/delivery/available-orders')
       const data = await res.json()
       if (res.ok) {
-        setAvailableOrders(data.orders)
+  setAvailableOrders(data.orders)
+  // record exposures (unique offers seen)
+  data.orders.forEach((o: DeliveryOrder) => exposuresRef.current.add(o._id))
+  // persist
+  try { if (typeof window !== 'undefined') localStorage.setItem('delivery_exposures', JSON.stringify(Array.from(exposuresRef.current))) } catch {}
       }
     } catch (error) {
       toast.error('Failed to fetch available orders')
@@ -107,6 +123,9 @@ export default function DeliveryDashboard() {
         const delivered = data.orders.filter((order: DeliveryOrder) => order.status === 'delivered');
         setMyOrders(nonDelivered);
         setDeliveryHistory(delivered);
+  // Include accepted + delivered orders in exposures for overall denominator
+  ;[...nonDelivered, ...delivered].forEach((o: DeliveryOrder) => exposuresRef.current.add(o._id))
+  try { if (typeof window !== 'undefined') localStorage.setItem('delivery_exposures', JSON.stringify(Array.from(exposuresRef.current))) } catch {}
   // ...existing code...
       }
     } catch (error) {
@@ -179,12 +198,13 @@ export default function DeliveryDashboard() {
 
   // derived helpers
   const totalActiveOrders = myOrders.length
+  // Acceptance Rate = Accepted Orders / Total Offers Exposed * 100
   const acceptanceRate = (() => {
-    if (!availableOrders.length && !myOrders.length) return 0
-    // naive placeholder: proportion of accepted (myOrders + history) against total exposures
     const accepted = myOrders.length + deliveryHistory.length
-    const total = availableOrders.length + accepted
-    return total ? Math.round((accepted / total) * 100) : 0
+  let exposures = exposuresRef.current.size || 0
+  if (exposures < accepted) exposures = accepted // ensure denominator at least accepted count
+  if (exposures === 0) return 0
+  return Math.round((accepted / exposures) * 100)
   })()
 
   const performanceSeries = (() => {

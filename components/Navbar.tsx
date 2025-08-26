@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ShoppingCart, User, Search, LogOut, Settings, Menu, X, MapPin, Phone } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import NotificationSystem from './NotificationSystem'
 import { useAuth } from '@/contexts/AuthContext'
 

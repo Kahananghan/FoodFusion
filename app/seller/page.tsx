@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, IndianRupee, Users, ShoppingBag, TrendingUp, Store, BarChart3, CheckCircle, XCircle, Search, LayoutGrid, List as ListIcon, Download, CalendarRange } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar'
 import { SellerSidebar } from '@/components/seller-sidebar'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -97,7 +97,11 @@ export default function SellerDashboard() {
   const deliveredOrders = filteredOrders.filter(o=>o.status==='delivered')
   const deliveredRevenue = deliveredOrders.reduce((s,o)=>s+(o.totalAmount||0),0)
   // overview analytics derived data
-  const recentOrders = orders.slice().sort((a:any,b:any)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0,5)
+  // Show only the 4 most recent orders on overview
+  const recentOrders = orders
+    .slice()
+    .sort((a:any,b:any)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0,4)
   const itemSalesMap: Record<string,{ name:string; qty:number; revenue:number }> = {}
   orders.forEach((o:any)=>{
     ;(o.items||[]).forEach((it:any)=>{
@@ -117,11 +121,19 @@ export default function SellerDashboard() {
   const allDelivered = orders.filter(o=>o.status==='delivered')
   const now = Date.now()
   const rangeDaysMap: Record<string, number> = { '7d': 7, '30d': 30 }
-  const rangeFilteredDelivered = allDelivered.filter(o=>{
-    if (reportRange==='all') return true
-    const days = rangeDaysMap[reportRange]
-    return (now - new Date(o.createdAt).getTime()) <= days*24*60*60*1000
-  }).filter(o=> reportSearch.trim()==='' || (o.orderNumber && o.orderNumber.toString().includes(reportSearch)) )
+  const rangeFilteredDelivered = allDelivered
+    .filter(o=>{
+      if (reportRange==='all') return true
+      const days = rangeDaysMap[reportRange]
+      return (now - new Date(o.createdAt).getTime()) <= days*24*60*60*1000
+    })
+    .filter(o=> {
+      const q = reportSearch.trim().toLowerCase()
+      if (!q) return true
+      const orderNum = o.orderNumber ? o.orderNumber.toString().toLowerCase() : ''
+      const idSuffix = (o._id ? o._id.toString() : '').slice(-6).toLowerCase()
+      return orderNum.includes(q) || idSuffix.includes(q)
+    })
     .sort((a,b)=>{
       if (reportSort==='date') return new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()
       if (reportSort==='total') return (b.totalAmount||0)-(a.totalAmount||0)
@@ -207,6 +219,13 @@ export default function SellerDashboard() {
   const checkRestaurant = async () => { try { const r = await fetch('/api/seller/restaurant'); const d = await r.json(); if (d.restaurant) { setCurrentRestaurant(d.restaurant); setRestaurantForm({ name: d.restaurant.name||'', description: d.restaurant.description||'', image: d.restaurant.image||'', cuisine: (d.restaurant.cuisine||[]).join(', '), deliveryTime: d.restaurant.deliveryTime||'', deliveryFee: d.restaurant.deliveryFee?.toString()||'', minimumOrder: d.restaurant.minimumOrder?.toString()||'', address: { street: d.restaurant.address?.street||'', city: d.restaurant.address?.city||'', state: d.restaurant.address?.state||'', zipCode: d.restaurant.address?.zipCode||'' }, isOpen: d.restaurant.isOpen !== undefined ? d.restaurant.isOpen : true }) } } catch {} }
 
   useEffect(() => { fetchMenuItems(); fetchStats(); checkRestaurant(); fetchUserInfo(); fetchOrders() }, [])
+  // Apply global seller-theme class to root html for consistent scrollbar styling
+  useEffect(()=> {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add('seller-theme')
+      return () => { document.documentElement.classList.remove('seller-theme') }
+    }
+  }, [])
 
   const calculateStatsFromOrders = (ordersList = orders) => {
     const delivered = ordersList.filter(o => o.status === 'delivered')
@@ -237,7 +256,7 @@ export default function SellerDashboard() {
           </Breadcrumb>
           <div className="ml-auto" />
         </header>
-        <main className="flex-1 p-4 md:p-6 bg-gradient-to-b from-green-50/40 via-background to-background dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 overflow-y-auto">
+  <main className="flex-1 p-4 md:p-6 bg-gradient-to-b from-green-50/40 via-background to-background dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 overflow-y-auto seller-scrollbar">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="flex flex-wrap gap-2 bg-white/60 dark:bg-gray-900/60 p-1 rounded-md border border-green-200/60 dark:border-gray-800 shadow-sm backdrop-blur">
               {[
@@ -282,7 +301,7 @@ export default function SellerDashboard() {
                     {recentOrders.length === 0 ? (
                       <div className="py-10 text-center text-xs text-muted-foreground border border-dashed rounded-md bg-white/50 dark:bg-gray-900/30">No orders yet</div>
                     ) : (
-                      <div className="rounded-lg border overflow-auto max-h-[320px]">
+                      <div className="rounded-lg border overflow-x-auto">
                         <Table className="min-w-[640px]">
                           <TableHeader>
                             <TableRow className="bg-gray-50/80 sticky top-0">
@@ -309,7 +328,9 @@ export default function SellerDashboard() {
                       </div>
                     )}
                     <div className="pt-3 flex justify-end">
-                      <Button size="sm" variant="outline" className="h-8 hover:bg-green-600" onClick={()=>setActiveTab('orders')}>View All Orders</Button>
+                      {orders.length > 0 && (
+                        <Button size="sm" variant="outline" className="h-8 hover:bg-green-600" onClick={()=>setActiveTab('orders')}>View All</Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -619,7 +640,7 @@ export default function SellerDashboard() {
                               <TableRow key={order._id} className="hover:bg-gray-50 transition">
                                 <TableCell className="font-medium align-top">
                                   #{shortId}
-                                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{created}</div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed whitespace-nowrap">{created}</div>
                                   <div className="mt-2 h-1.5 rounded bg-gray-100 dark:bg-gray-800 overflow-hidden w-full">
                                     <div className="h-full bg-green-500/70 transition-all" style={{width: progressPct + '%'}} />
                                   </div>
@@ -724,7 +745,6 @@ export default function SellerDashboard() {
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">Earning (70%)</TableHead>
                             <TableHead className="text-right">Platform (30%)</TableHead>
-                            <TableHead className="text-right">Avg Diff</TableHead>
                             <TableHead className="text-right">Status</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -733,14 +753,12 @@ export default function SellerDashboard() {
                             const total = o.totalAmount||0
                             const earning = Math.round(total*0.7)
                             const platform = total-earning
-                            const diff = avgOrderValue ? Math.round(((total-avgOrderValue)/avgOrderValue)*100) : 0
                             return (
                               <TableRow key={o._id} className="hover:bg-gray-50">
-                                <TableCell className="font-medium align-top">#{o.orderNumber || o._id.slice(-6)}<div className="text-[10px] text-muted-foreground mt-0.5">{new Date(o.createdAt).toLocaleString()}</div></TableCell>
+                                <TableCell className="font-medium align-top">#{o.orderNumber || o._id.slice(-6)}<div className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{new Date(o.createdAt).toLocaleString()}</div></TableCell>
                                 <TableCell className="text-right tabular-nums">₹{total.toLocaleString()}</TableCell>
                                 <TableCell className="text-right tabular-nums text-green-700 font-semibold">₹{earning.toLocaleString()}</TableCell>
                                 <TableCell className="text-right tabular-nums text-amber-600">₹{platform.toLocaleString()}</TableCell>
-                                <TableCell className={`text-right text-[11px] font-medium ${diff===0?'text-gray-500': diff>0 ? 'text-green-600':'text-red-600'}`}>{diff===0? '—' : (diff>0? '+'+diff: diff)+'%'}</TableCell>
                                 <TableCell className="text-right"><StatusBadge status="delivered" /></TableCell>
                               </TableRow>
                             )

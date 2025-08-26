@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { User, Mail, Lock, Phone, MapPin } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from '@/components/CustomToaster'
 
 export default function Register() {
   const [formData, setFormData] = useState({

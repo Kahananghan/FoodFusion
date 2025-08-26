@@ -26,7 +26,7 @@ export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrim
       <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
         <DialogPrimitive.Content
           ref={ref}
-          className={cn('relative w-full max-w-md sm:rounded-lg border bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:duration-150', className)}
+          className={cn('relative w-full max-w-md sm:rounded-lg border bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:duration-150 text-gray-800 dark:text-gray-100', className)}
           {...props}
         >
           {children}
@@ -42,7 +42,7 @@ export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrim
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 export const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
+  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left mb-4', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 
@@ -59,3 +59,9 @@ export const DialogDescription = React.forwardRef<React.ElementRef<typeof Dialog
   )
 )
 DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+// Footer helper (flex container for actions)
+export const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2', className)} {...props} />
+)
+DialogFooter.displayName = 'DialogFooter'
