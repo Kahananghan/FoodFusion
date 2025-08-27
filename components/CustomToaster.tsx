@@ -4,7 +4,6 @@ import * as React from 'react'
 import { CheckCircle2, AlertTriangle, Info, Loader2 } from 'lucide-react'
 import { ToastProvider, useToast } from '@/components/ui/toast'
 
-// Helper API mirroring prior react-hot-toast usage
 export const toast = {
   success: (description: React.ReactNode, opts?: any) => pushToast({ description, title: 'Success', variant: 'success', ...opts }),
   error: (description: React.ReactNode, opts?: any) => pushToast({ description, title: 'Error', variant: 'error', ...opts }),
@@ -15,7 +14,6 @@ export const toast = {
 
 let pushToast: (t: any) => string
 
-// Bridge component to capture context function
 function ToastBridge() {
   const { push } = useToast()
   React.useEffect(() => { pushToast = (t) => push({ id: t.id, title: t.title, description: (
@@ -41,8 +39,3 @@ export default function CustomToaster({ children }: { children?: React.ReactNode
   )
 }
 
-// Example usage (after migration):
-// import { toast } from '@/components/CustomToaster'
-// toast.success('Item added to cart')
-// toast.error('Failed to place order')
-// toast.info('Welcome back!')
