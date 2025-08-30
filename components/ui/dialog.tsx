@@ -23,7 +23,7 @@ export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrim
   ({ className, children, ...props }, ref) => (
     <DialogPortal>
       <DialogOverlay />
-      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+  <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto overflow-x-hidden">
         <DialogPrimitive.Content
           ref={ref}
           className={cn('relative w-full max-w-md sm:rounded-lg border bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:duration-150 text-gray-800 dark:text-gray-100', className)}
