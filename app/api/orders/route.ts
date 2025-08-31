@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import Restaurant from '@/models/Restaurant'
 import User from '@/models/User'
 import jwt from 'jsonwebtoken'
 
@@ -16,11 +17,28 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     const userId = decoded.userId
     
-    const orders = await Order.find({ user: userId })
+  // @ts-ignore mongoose dynamic model typing
+  const orders = await Order.find({ user: userId })
       .sort({ createdAt: -1 })
       .lean()
-    
-    return NextResponse.json({ orders })
+
+    // Collect unique restaurant ids (filter valid ObjectIds)
+  const restaurantIds: string[] = Array.from(new Set(orders.map((o: any) => o.restaurant).filter(Boolean))) as string[]
+    let restaurantMap: Record<string,string> = {}
+    if (restaurantIds.length) {
+      try {
+        // Some stored ids might be plain strings not valid ObjectIds, attempt both
+  const validIds = restaurantIds.filter((id: string) => (id && (id as any).length >= 12)) // heuristic
+  // @ts-ignore mongoose dynamic model typing
+  const docs = await Restaurant.find({ _id: { $in: validIds } }).select('_id name').lean()
+        restaurantMap = docs.reduce((acc: any, r: any) => { acc[r._id.toString()] = r.name; return acc }, {})
+      } catch (e) {
+        console.warn('Restaurant lookup failed', e)
+      }
+    }
+
+    const enriched = orders.map(o => ({ ...o, restaurantName: restaurantMap[o.restaurant]}))
+    return NextResponse.json({ orders: enriched })
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json({ orders: [] })
@@ -53,7 +71,8 @@ export async function POST(request: NextRequest) {
   let deliveryAddress = body.deliveryAddress;
   // Debug: log type and value
   console.log('DEBUG deliveryAddress before save:', typeof deliveryAddress, deliveryAddress);
-    const user = await User.findById(userId);
+  // @ts-ignore mongoose dynamic model typing
+  const user = await User.findById(userId);
     if (!deliveryAddress || typeof deliveryAddress === 'string') {
       let found: any = null;
       if (user && Array.isArray(user.addresses) && typeof deliveryAddress === 'string') {
@@ -86,6 +105,17 @@ export async function POST(request: NextRequest) {
     } else {
       return NextResponse.json({ error: 'Invalid delivery address.' }, { status: 400 });
     }
+    // If client supplies combinedTotalAmount (sum of all restaurant orders from one checkout) use it to determine free delivery waiver
+    let combinedTotalAmount = body.combinedTotalAmount
+    if (typeof combinedTotalAmount === 'number' && combinedTotalAmount >= 500) {
+      // Waive delivery fee for this split order as overall cart qualified
+      if (deliveryFee > 0) {
+        console.log('Waiving delivery fee due to combinedTotalAmount >=500')
+      }
+    } else {
+      combinedTotalAmount = undefined
+    }
+
     const orderData = {
       user: userId,
       restaurant: body.restaurant,
@@ -93,7 +123,8 @@ export async function POST(request: NextRequest) {
       totalAmount,
       deliveryAddress,
       status: body.status || 'confirmed',
-      deliveryFee,
+      deliveryFee: (combinedTotalAmount && combinedTotalAmount >= 500) ? 0 : deliveryFee,
+      combinedTotalAmount,
       estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
     }
     const order = new Order(orderData)

@@ -16,13 +16,15 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     
     // Get the restaurant for this seller
-    const restaurant = await Restaurant.findOne({ owner: decoded.userId })
+  // @ts-ignore suppress mongoose typing overload complexity
+  const restaurant = await Restaurant.findOne({ owner: decoded.userId })
     if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
     
     // Find orders for this restaurant
-    const orders = await Order.find({ restaurant: restaurant.name })
+  // @ts-ignore suppress mongoose typing overload complexity
+  const orders = await Order.find({ restaurant: restaurant.name })
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
       .limit(50)
@@ -37,6 +39,14 @@ export async function GET(request: NextRequest) {
       },
       items: order.items,
       totalAmount: order.totalAmount,
+      deliveryFee: order.deliveryFee,
+      combinedTotalAmount: order.combinedTotalAmount,
+      freeDelivery: order.deliveryFee === 0,
+      freeDeliveryReason: (order.deliveryFee === 0) ? (
+        (order.combinedTotalAmount && order.combinedTotalAmount >= 500 && order.totalAmount < 500 + (order.deliveryFee || 0))
+          ? 'waived-via-combined-cart'
+          : 'subtotal-threshold'
+      ) : null,
       status: order.status,
       createdAt: order.createdAt
     }))

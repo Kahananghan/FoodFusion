@@ -7,14 +7,16 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB()
     
-    const orders = await Order.find({})
+  // @ts-ignore suppress mongoose typing overload complexity
+  const orders = await Order.find({})
       .populate('user', 'name email')
       .populate('deliveryPersonId', 'name')
       .sort({ createdAt: -1 })
       .limit(100)
 
     // Get all restaurants to create a mapping
-    const restaurants = await Restaurant.find({}, 'name')
+  // @ts-ignore suppress mongoose typing overload complexity
+  const restaurants = await Restaurant.find({}, 'name')
     const restaurantNames = restaurants.map(r => r.name)
     
     // Transform orders to match admin interface expectations
@@ -39,6 +41,14 @@ export async function GET(request: NextRequest) {
         },
         status: order.status,
         total: order.totalAmount,
+        deliveryFee: order.deliveryFee,
+        combinedTotalAmount: order.combinedTotalAmount,
+        freeDelivery: (order.deliveryFee === 0) ? true : false,
+        freeDeliveryReason: (order.deliveryFee === 0) ? (
+          (order.combinedTotalAmount && order.combinedTotalAmount >= 500 && order.totalAmount < 500 + (order.deliveryFee || 0))
+            ? 'waived-via-combined-cart'
+            : 'subtotal-threshold'
+        ) : null,
         createdAt: order.createdAt,
         deliveryPartner: order.deliveryPersonId ? {
           name: order.deliveryPersonId.name

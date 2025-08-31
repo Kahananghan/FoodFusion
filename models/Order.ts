@@ -27,7 +27,7 @@ const OrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'preparing', 'out-for-delivery', 'delivered', 'cancelled'],
+  enum: ['pending', 'confirmed', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
     default: 'pending'
   },
   paymentStatus: {
@@ -38,6 +38,8 @@ const OrderSchema = new mongoose.Schema({
   deliveryPersonId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   deliveryFee: { type: Number, default: 5 },
   estimatedDeliveryTime: Date
+  ,
+  combinedTotalAmount: { type: Number } // optional: total of original combined cart across restaurants
 }, {
   timestamps: true
 })

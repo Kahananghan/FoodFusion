@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     
     // Find orders assigned to this delivery person
-    const orders = await Order.find({ deliveryPersonId: decoded.userId })
+  // @ts-ignore suppress complex mongoose overload typing
+  const orders = await Order.find({ deliveryPersonId: decoded.userId })
       .populate('user', 'name phone addresses')
       .sort({ createdAt: -1 })
       .limit(20)
@@ -54,6 +55,13 @@ export async function GET(request: NextRequest) {
       })),
       totalAmount: order.totalAmount,
       deliveryFee: order.deliveryFee || 40,
+      combinedTotalAmount: order.combinedTotalAmount,
+      freeDelivery: (order.deliveryFee === 0),
+      freeDeliveryReason: (order.deliveryFee === 0) ? (
+        (order.combinedTotalAmount && order.combinedTotalAmount >= 500 && order.totalAmount < 500 + (order.deliveryFee || 0))
+          ? 'waived-via-combined-cart'
+          : 'subtotal-threshold'
+      ) : null,
       status: order.status,
       estimatedDeliveryTime: order.estimatedDeliveryTime,
       createdAt: order.createdAt,
