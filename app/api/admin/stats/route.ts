@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Revenue calculations
     const revenueData = await Order.aggregate([
       { $match: { status: 'delivered' } },
-      { $group: { _id: null, totalRevenue: { $sum: '$total' }, count: { $sum: 1 } } }
+      { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' }, count: { $sum: 1 } } }
     ])
     
     const totalRevenue = revenueData[0]?.totalRevenue || 0

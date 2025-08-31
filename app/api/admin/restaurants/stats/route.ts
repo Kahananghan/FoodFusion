@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import Restaurant from '@/models/Restaurant'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,15 +16,17 @@ export async function GET(request: NextRequest) {
     const name = searchParams.get('name')
     if (!name) return NextResponse.json({ error: 'Missing name' }, { status: 400 })
 
-    // Using case-insensitive match to align with stored string in orders
-    const match = { restaurant: { $regex: new RegExp('^' + name + '$', 'i') } }
+    // Find the restaurant document by name (case-insensitive) to obtain its id
+    const restaurantDoc = await (Restaurant as any).findOne({ name: { $regex: new RegExp('^' + name + '$', 'i') } }).select('_id name')
+    let keys: string[] = [name]
+    if (restaurantDoc) keys = Array.from(new Set([restaurantDoc.name, restaurantDoc._id.toString()]))
     const pipeline: any[] = [
-      { $match: match },
-      { $group: { _id: '$restaurant', orders: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } }
+      { $match: { restaurant: { $in: keys } } },
+      { $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } }
     ]
     const agg = await (Order as any).aggregate(pipeline)
     const stats = agg[0] || { orders: 0, revenue: 0 }
-    return NextResponse.json({ stats: { totalOrders: stats.orders, revenue: stats.revenue } })
+    return NextResponse.json({ stats: { totalOrders: stats.orders || 0, revenue: stats.revenue || 0 } })
   } catch (e) {
     return NextResponse.json({ error: 'Failed to compute stats' }, { status: 500 })
   }

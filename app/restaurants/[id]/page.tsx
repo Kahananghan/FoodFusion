@@ -6,6 +6,10 @@ import { Star, MapPin, Plus, Minus } from 'lucide-react'
 import { addToCart as addToCartDB } from '@/utils/cart'
 import Loader from '@/components/Loader'
 import { toast } from '@/components/CustomToaster'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 
 interface MenuItem {
   id: string
@@ -212,165 +216,169 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen px-20 bg-gradient-to-br from-orange-50/60 via-white to-orange-100/80 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900">
       {restaurant && (
         <>
-          <div className="relative h-80">
+          {/* Hero Section */}
+          <div className="relative h-96 flex items-end justify-center">
             <Image
               src={restaurant.featured_image}
               alt={restaurant.name}
               fill
-              className="object-cover"
+              className="object-cover h-full w-full rounded-3xl"
+              priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h1 className="text-4xl font-bold mb-2 drop-shadow-lg">{restaurant.name}</h1>
-              <p className="text-xl opacity-90 drop-shadow">{restaurant.cuisines}</p>
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center mb-3">
-                    <div className="bg-yellow-50 p-2 rounded-full mr-3">
-                      <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                    </div>
-                    <span className="font-bold text-xl text-yellow-600">{restaurant.user_rating.aggregate_rating}</span>
-                    <span className="text-gray-600 ml-3 text-lg">{restaurant.user_rating.rating_text}</span>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent rounded-3xl" />
+            <Card className="absolute left-1/3 -translate-x-1/2 bottom-0 translate-y-1/2 w-[95vw] max-w-3xl shadow-2xl border-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl">
+              <CardContent className="py-6 px-8 flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white mb-1">{restaurant.name}</h1>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge variant="secondary" className="flex items-center gap-1 bg-white text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 border border-orange-100 dark:border-neutral-700">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <span className="font-medium text-sm">{restaurant.user_rating.aggregate_rating}</span>
+                    </Badge>
+                    <span className="text-gray-600 text-base">{restaurant.user_rating.rating_text}</span>
                   </div>
-                  <p className="text-gray-600 flex items-center text-lg">
-                    <MapPin className="h-5 w-5 mr-2 text-primary" />
+                  <p className="text-neutral-700 dark:text-neutral-200 flex items-center text-base">
+                    <MapPin className="h-5 w-5 mr-2 text-orange-500" />
                     {restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}
                   </p>
+                  <p className="text-sm text-orange-700 mt-1">{restaurant.cuisines}</p>
                 </div>
-                
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <div className="flex items-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-800">Menu</h2>
-                  <div className="ml-4 h-1 flex-1 bg-gradient-to-r from-primary to-transparent rounded"></div>
-                </div>
-                <div className="space-y-6">
-                  {menuItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 flex border border-gray-100">
-                      <div className="relative flex items-center justify-center w-[200px] h-[150px]">
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          width={200}
-                          height={100}
-                          className="rounded-xl object-cover shadow-md aspect-[2/1] w-[200px] h-[150px]"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
-                      </div>
-                      <div className="ml-6 flex-1">
+          <div className="max-w-7xl mx-auto px-4 pt-32 pb-12 grid lg:grid-cols-3 gap-10">
+            {/* Menu Section */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white">Menu</h2>
+                <Separator className="ml-4 h-1 flex-1 bg-orange-500 dark:bg-orange-300/20" />
+              </div>
+              <div className="space-y-8">
+                {menuItems.map((item) => (
+                  <Card key={item.id} className="flex flex-col md:flex-row items-stretch bg-white/80 dark:bg-neutral-900/80 border-0 shadow-lg backdrop-blur-xl overflow-hidden">
+                    <div className="relative w-full md:w-56 h-40 md:h-auto flex-shrink-0">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between p-6">
+                      <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
+                          <CardTitle className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white">{item.name}</CardTitle>
                           {item.isVegetarian !== undefined && (
                             item.isVegetarian ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Veg</span>
+                              <Badge className="bg-green-100 text-green-700 border border-green-200">Veg</Badge>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">Non-Veg</span>
+                              <Badge className="bg-red-100 text-red-700 border border-red-200">Non-Veg</Badge>
                             )
                           )}
                         </div>
-                        <p className="text-gray-600 mb-3 leading-relaxed">{item.description}</p>
-                        <div className="flex items-center">
-                          <span className="text-2xl font-bold text-primary">₹{item.price}</span>
-                        </div>
+                        <p className="text-neutral-600 dark:text-neutral-300 mb-3 leading-relaxed">{item.description}</p>
                       </div>
-                      <div className="flex items-center ml-4">
+                      <div className="flex items-center justify-between mt-4">
+                        <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
                         {cart[item.id] > 0 ? (
-                          <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-2">
-                            <button
+                          <div className="flex items-center space-x-3 bg-orange-50/60 dark:bg-orange-900/30 rounded-xl p-2">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="w-9 h-9"
                               onClick={() => removeFromCart(item.id)}
-                              className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                               <Minus className="h-4 w-4" />
-                            </button>
-                            <span className="font-bold text-primary text-lg min-w-[30px] text-center">{cart[item.id]}</span>
-                            <button
+                            </Button>
+                            <span className="font-bold text-orange-600 text-lg min-w-[30px] text-center">{cart[item.id]}</span>
+                            <Button
+                              type="button"
+                              variant="success"
+                              size="icon"
+                              className="w-9 h-9 bg-green-500 hover:bg-green-600 text-white"
                               onClick={() => addToCart(item.id)}
-                              className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                               <Plus className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         ) : (
-                          <div className="text-right">
-                            <button
-                              onClick={() => addToCart(item.id)}
-                              className="px-6 py-3 bg-gradient-to-r from-primary to-orange-500 text-white rounded-xl font-semibold hover:from-orange-500 hover:to-primary transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                            >
-                              Add to Cart
-                            </button>
-                          </div>
+                          <Button
+                            type="button"
+                            className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-xl"
+                            onClick={() => addToCart(item.id)}
+                          >
+                            Add to Cart
+                          </Button>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </Card>
+                ))}
               </div>
+            </div>
 
-              <div className="lg:col-span-1">
-                {getTotalItems() > 0 && (
-                  <div className="bg-white rounded-xl shadow-xl p-6 sticky top-4 border border-gray-100">
-                    <div className="flex items-center mb-6">
-                      <div className="bg-primary/10 p-2 rounded-full mr-3">
-                        <div className="w-4 h-4 bg-primary rounded-full"></div>
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-800">Cart ({getTotalItems()} items)</h3>
-                    </div>
-                    <div className="space-y-3 mb-6">
-                      {Array.isArray(menuItems) && menuItems.filter(item => cart[item.id] > 0).map(item => (
-                        <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                          <span className="font-medium text-gray-700">{item.name} x {cart[item.id]}</span>
-                          <span className="font-bold text-primary">₹{item.price * cart[item.id]}</span>
+            {/* Cart Section */}
+            <div className="lg:col-span-1 mt-16">
+              {getTotalItems() > 0 && (
+                <Card className="shadow-2xl border-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl sticky top-24 rounded-2xl">
+                  <CardContent className="p-0">
+                    <div className="px-8 pt-8 pb-4">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-orange-100 p-2 rounded-full mr-3">
+                          <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-600">Subtotal</span>
-                        <span className="font-semibold text-primary">₹{getTotalPrice()}</span>
+                        <CardTitle className="text-2xl font-bold text-neutral-900 dark:text-white">Your Cart</CardTitle>
                       </div>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-600">Delivery Fee</span>
-                        {getDeliveryFee() === 0 ? (
-                          <span className="font-semibold text-green-600">FREE</span>
-                        ) : (
-                          <span className="font-semibold text-orange-600">₹{getDeliveryFee()}</span>
+                      <Separator className="mb-4 bg-orange-100 dark:bg-orange-300/20" />
+                      <div className="max-h-64 overflow-y-auto pr-2 space-y-3 mb-6 custom-scrollbar">
+                        {Array.isArray(menuItems) && menuItems.filter(item => cart[item.id] > 0).map(item => (
+                          <div key={item.id} className="flex justify-between items-center py-2 border-b border-orange-100 last:border-b-0">
+                            <span className="font-medium text-neutral-700 dark:text-neutral-200 truncate max-w-[60%]">{item.name} x {cart[item.id]}</span>
+                            <span className="font-bold text-orange-600">₹{item.price * cart[item.id]}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-orange-50/80 dark:bg-orange-900/40 rounded-xl p-4 mb-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-neutral-600 dark:text-neutral-300">Subtotal</span>
+                          <span className="font-semibold text-orange-600">₹{getTotalPrice()}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-neutral-600 dark:text-neutral-300">Delivery Fee</span>
+                          {getDeliveryFee() === 0 ? (
+                            <span className="font-semibold text-green-600">FREE</span>
+                          ) : (
+                            <span className="font-semibold text-orange-600">₹{getDeliveryFee()}</span>
+                          )}
+                        </div>
+                        {getTotalPrice() < 500 && (
+                          <div className="text-xs text-orange-500 mb-3">Add ₹{500 - getTotalPrice()} more for free delivery</div>
                         )}
+                        {getTotalPrice() >= 500 && (
+                          <div className="text-xs text-green-600 mb-3 font-medium">🎉 You unlocked free delivery!</div>
+                        )}
+                        <div className="border-t pt-3 flex justify-between items-center">
+                          <span className="text-xl font-bold text-neutral-900 dark:text-white">Total</span>
+                          <span className="text-2xl font-bold text-orange-600">₹{getTotalPrice() + getDeliveryFee()}</span>
+                        </div>
                       </div>
-                      {getTotalPrice() < 500 && (
-                        <div className="text-xs text-gray-500 mb-3">Add ₹{500 - getTotalPrice()} more for free delivery</div>
-                      )}
-                      {getTotalPrice() >= 500 && (
-                        <div className="text-xs text-green-600 mb-3 font-medium">🎉 You unlocked free delivery!</div>
-                      )}
-                      <div className="border-t pt-3 flex justify-between items-center">
-                        <span className="text-xl font-bold text-gray-800">Total</span>
-                        <span className="text-2xl font-bold text-primary">₹{getTotalPrice() + getDeliveryFee()}</span>
-                      </div>
+                      <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white  rounded-xl font-bold text-lg hover:from-orange-600 hover:to-orange-500 transition-all duration-300 shadow-xl hover:shadow-2xl block text-center mt-2">
+                        <a href="/cart">Proceed to Cart →</a>
+                      </Button>
                     </div>
-                    <a 
-                      href="/cart"
-                      className="w-full bg-gradient-to-r from-primary to-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-500 hover:to-primary transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 block text-center"
-                    >
-                      Proceed to Cart →
-                    </a>
-                  </div>
-                )}
-              </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-            </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import dbConnect from '@/lib/mongodb'
 import Restaurant from '@/models/Restaurant'
+import Order from '@/models/Order'
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +23,84 @@ export async function GET(request: NextRequest) {
       .populate('owner', 'name email')
       .sort({ createdAt: -1 })
 
-    return NextResponse.json({ restaurants })
+    // Build match set of all restaurant names and ids (string) to aggregate orders in one pass
+    const nameSet = new Set<string>()
+    const idSet = new Set<string>()
+    restaurants.forEach((r: any) => { if (r.name) nameSet.add(r.name); if (r._id) idSet.add(r._id.toString()) })
+    // Build match values: include string ids directly and case-insensitive regex for each name
+    const matchValues = [
+      ...Array.from(idSet),
+      ...Array.from(nameSet).map(n => new RegExp('^' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'))
+    ]
+
+    // Aggregate orders by their stored restaurant string referencing either name or id
+  let orderAgg: Record<string, any> = {}
+    if (matchValues.length) {
+      try {
+        // @ts-ignore suppress typing complexity
+        const pipeline = [
+          { $match: { restaurant: { $in: matchValues } } },
+          { $group: { _id: '$restaurant', totalOrders: { $sum: 1 }, revenueAll: { $sum: '$totalAmount' }, deliveredRevenue: { $sum: { $cond: [{ $eq: ['$status','delivered'] }, '$totalAmount', 0] } } } }
+        ]
+        // @ts-ignore
+        const agg = await Order.aggregate(pipeline)
+  orderAgg = agg.reduce((acc: any, row: any) => { acc[row._id] = { totalOrders: row.totalOrders, deliveredRevenue: row.deliveredRevenue, revenueAll: row.revenueAll }; return acc }, {})
+  // Ensure every key has revenueAll field
+  Object.keys(orderAgg).forEach(k => { const entry: any = orderAgg[k]; if (typeof entry.revenueAll !== 'number') entry.revenueAll = entry.deliveredRevenue })
+      } catch (e) {
+        console.warn('Admin restaurants aggregation failed', e)
+      }
+    }
+
+    const mapped = await Promise.all(restaurants.map(async (r: any) => {
+      const idKey = r._id.toString()
+      const nameKey = r.name
+  const idStats = (orderAgg[idKey] as any) || { totalOrders: 0, deliveredRevenue: 0, revenueAll: 0 }
+  const nameStats = (orderAgg[nameKey] as any) || { totalOrders: 0, deliveredRevenue: 0, revenueAll: 0 }
+      // Combine in case some orders stored by id and some by name
+      const combinedOrders = idStats.totalOrders + nameStats.totalOrders
+  const combinedDeliveredRevenue = idStats.deliveredRevenue + nameStats.deliveredRevenue
+  const combinedRevenueAll = idStats.revenueAll + nameStats.revenueAll
+
+      let totalOrders = typeof r.totalOrders === 'number' ? r.totalOrders : 0
+      let revenue = typeof r.revenue === 'number' ? r.revenue : 0
+
+      // If persisted is behind aggregated, update document (best effort, non-blocking)
+      if (combinedOrders > totalOrders || combinedRevenueAll > revenue) {
+        totalOrders = Math.max(totalOrders, combinedOrders)
+        revenue = Math.max(revenue, combinedRevenueAll)
+        try {
+          r.totalOrders = totalOrders
+          r.revenue = revenue
+          await r.save()
+        } catch (e) {
+          console.warn('Failed to persist combined restaurant stats', r._id.toString(), e)
+        }
+      }
+
+      return {
+        _id: r._id,
+        name: r.name,
+        description: r.description,
+        image: r.image,
+        cuisine: r.cuisine,
+        deliveryTime: r.deliveryTime,
+        deliveryFee: r.deliveryFee,
+        minimumOrder: r.minimumOrder,
+        isOpen: r.isOpen,
+        status: r.status,
+        createdAt: r.createdAt,
+        owner: r.owner,
+  totalOrders,
+  revenue, // total revenue across all orders (any status)
+  deliveredRevenue: combinedDeliveredRevenue,
+        averageRating: r.averageRating || 0,
+        totalReviews: r.totalReviews || 0,
+        address: r.address
+      }
+    }))
+
+    return NextResponse.json({ restaurants: mapped })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch restaurants' }, { status: 500 })
   }

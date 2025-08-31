@@ -41,7 +41,8 @@ interface Restaurant {
   cuisine?: string
   rating?: number
   totalOrders?: number
-  revenue?: number
+  revenue?: number // total revenue (all order statuses)
+  deliveredRevenue?: number // delivered-only revenue (backend aggregated)
 }
 
 interface Order {
@@ -53,6 +54,10 @@ interface Order {
   total: number
   createdAt: string
   deliveryPartner?: { name: string }
+  items?: { name: string; price: number; quantity: number; total: number; image?: string | null }[]
+  subtotal?: number
+  deliveryFee?: number
+  deliveryAddress?: { name: string; phone: string; street: string; city: string; state: string; zipCode: string; landmark?: string; type?: string } | null
 }
 
 interface DeliveryPartner {
@@ -614,12 +619,16 @@ export default function AdminDashboard() {
   const [analyticsRange, setAnalyticsRange] = useState<7 | 14 | 30>(7)
   const today = new Date(); today.setHours(0,0,0,0)
   const start = new Date(today); start.setDate(start.getDate() - (analyticsRange - 1))
+  // Use an exclusive upper bound (start of tomorrow) so we include all timestamps from today
+  const end = new Date(today); end.setDate(end.getDate() + 1)
+  // Local (non-UTC) date formatter to avoid losing the 31st due to timezone shifts when using toISOString
+  const formatLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   const rangeLabels: string[] = []
   for (let i = analyticsRange - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i); rangeLabels.push(d.toISOString().slice(0,10))
+    const d = new Date(today); d.setDate(d.getDate() - i); rangeLabels.push(formatLocalDate(d))
   }
   const rangeMap: Record<string,{date:string; orders:number; revenue:number}> = Object.fromEntries(rangeLabels.map(l=>[l,{date:l,orders:0,revenue:0}]))
-  orders.forEach(o=>{ const dt=new Date(o.createdAt); if(dt>=start && dt<=today) { const k=dt.toISOString().slice(0,10); if(rangeMap[k]) { rangeMap[k].orders+=1; rangeMap[k].revenue+= Number(o.total)||0 } } })
+  orders.forEach(o=>{ const dt=new Date(o.createdAt); if(dt>=start && dt<end) { const k=formatLocalDate(dt); if(rangeMap[k]) { rangeMap[k].orders+=1; rangeMap[k].revenue+= Number(o.total)||0 } } })
   const dailySeries = rangeLabels.map(l=>rangeMap[l])
   // shape for OrdersRevenueChart
   const ordersRevenueData = dailySeries.map(d => ({ date: d.date, orders: d.orders, revenue: d.revenue }))
@@ -1390,8 +1399,7 @@ export default function AdminDashboard() {
                       {viewUser.lastLogin && <p className="text-[11px] text-gray-500 dark:text-gray-400">{relativeTime(viewUser.lastLogin)}</p>}
                     </div>
                   </div>
-                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-                    <Button variant="outline" onClick={()=> setViewUser(null)}>Close</Button>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
                     <Button
                       variant={viewUser.isActive ? 'destructive' : 'default'}
                       onClick={()=> { handleUserStatusToggle(viewUser._id, viewUser.isActive); setViewUser(null) }}
@@ -1417,12 +1425,11 @@ export default function AdminDashboard() {
                     <div><p className="text-xs text-muted-foreground">Cuisine</p><p className="font-medium">{Array.isArray(viewRestaurant.cuisine) ? (viewRestaurant.cuisine.join(', ') || '—') : (viewRestaurant.cuisine || '—')}</p></div>
                     <div><p className="text-xs text-muted-foreground">Rating</p><p className="font-medium">{viewRestaurant.rating ?? '—'}</p></div>
                     <div><p className="text-xs text-muted-foreground">Orders</p><p className="font-medium">{restaurantLiveStats ? restaurantLiveStats.totalOrders : (viewRestaurant.totalOrders ?? 0)}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Revenue</p><p className="font-medium">₹{(restaurantLiveStats ? restaurantLiveStats.revenue : (viewRestaurant.revenue || 0)).toLocaleString()}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Revenue</p><p className="font-medium">₹{(viewRestaurant.revenue || 0).toLocaleString()}</p></div>
                     <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-0.5"><StatusBadge color={viewRestaurant.status === 'approved' ? 'green' : viewRestaurant.status === 'rejected' ? 'red' : 'yellow'}>{viewRestaurant.status}</StatusBadge></div></div>
                     <div><p className="text-xs text-muted-foreground">Applied</p><p className="font-medium">{formatDateTime(viewRestaurant.createdAt)}</p></div>
                   </div>
                   <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-                    <Button variant="outline" onClick={()=> setViewRestaurant(null)}>Close</Button>
                     {viewRestaurant.status === 'pending' && (
                       <div className="flex gap-2">
                         <Button variant="default" onClick={()=> { handleRestaurantApproval(viewRestaurant._id, 'approved'); setViewRestaurant(null) }}>Approve</Button>
@@ -1460,9 +1467,55 @@ export default function AdminDashboard() {
                     <div><p className="text-xs text-muted-foreground">Restaurant</p><p className="font-medium">{viewOrder.restaurant?.name || '—'}</p></div>
                     <div><p className="text-xs text-muted-foreground">Delivery Partner</p><p className="font-medium">{viewOrder.deliveryPartner?.name || 'Unassigned'}</p></div>
                   </div>
-                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-                    <Button variant="outline" onClick={()=> setViewOrder(null)}>Close</Button>
-                  </DialogFooter>
+                  {viewOrder.items && viewOrder.items.length > 0 && (
+                    <div className="mt-2 border rounded-md overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 dark:bg-gray-800 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold">Item</th>
+                            <th className="text-center px-3 py-2 font-semibold">Qty</th>
+                            <th className="text-center px-3 py-2 font-semibold">Price</th>
+                            <th className="text-right px-3 py-2 font-semibold">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewOrder.items.map((it,i)=>(
+                            <tr key={i} className="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-900 dark:even:bg-gray-800/50">
+                              <td className="px-3 py-1.5 font-medium text-gray-700 dark:text-gray-200">{it.name}</td>
+                              <td className="px-3 py-1.5 text-center tabular-nums">{it.quantity}</td>
+                              <td className="px-3 py-1.5 text-center tabular-nums">₹{it.price}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums font-medium">₹{it.total}</td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td colSpan={3} className="px-3 py-1.5 text-right font-semibold">Subtotal</td>
+                            <td className="px-3 py-1.5 text-right font-semibold tabular-nums">₹{(viewOrder.subtotal ?? (viewOrder.items.reduce((s,i)=>s+i.total,0))).toFixed(2)}</td>
+                          </tr>
+                          {typeof viewOrder.deliveryFee === 'number' && (
+                            <tr>
+                              <td colSpan={3} className="px-3 py-1.5 text-right font-semibold">Delivery Fee</td>
+                              <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{viewOrder.deliveryFee === 0 ? <span className="text-green-600">FREE</span> : `₹${viewOrder.deliveryFee.toFixed(2)}`}</td>
+                            </tr>
+                          )}
+                          <tr className="bg-orange-50 dark:bg-orange-900/30">
+                            <td colSpan={3} className="px-3 py-1.5 text-right font-bold">Total</td>
+                            <td className="px-3 py-1.5 text-right font-bold tabular-nums">₹{viewOrder.total.toFixed(2)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {viewOrder.deliveryAddress && (
+                    <div className="mt-4 rounded-md border border-dashed border-orange-300 bg-orange-50/60 dark:bg-orange-950/30 p-4 text-xs leading-relaxed">
+                      <p className="text-[11px] uppercase tracking-wide font-semibold text-orange-600 mb-1.5">Delivery Address</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-100 text-[13px]">{viewOrder.deliveryAddress.name} {viewOrder.deliveryAddress.type && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-white/70 border border-orange-200 text-orange-600 normal-case">{viewOrder.deliveryAddress.type}</span>}</p>
+                      <p className="text-gray-600 dark:text-gray-300">{viewOrder.deliveryAddress.street}</p>
+                      <p className="text-gray-600 dark:text-gray-300">{viewOrder.deliveryAddress.city}, {viewOrder.deliveryAddress.state} {viewOrder.deliveryAddress.zipCode}</p>
+                      {viewOrder.deliveryAddress.landmark && <p className="text-gray-500 dark:text-gray-400 italic">Near {viewOrder.deliveryAddress.landmark}</p>}
+                      <p className="mt-2 text-gray-700 dark:text-gray-200 font-medium">Ph: {viewOrder.deliveryAddress.phone}</p>
+                    </div>
+                  )}
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between" />
                 </div>
               )}
             </DialogContent>
@@ -1486,9 +1539,7 @@ export default function AdminDashboard() {
                     <div><p className="text-xs text-muted-foreground">Earnings</p><p className="font-medium">₹{(typeof viewPartner.earnings === 'number' ? viewPartner.earnings : 0).toFixed(2)}</p></div>
                     <div><p className="text-xs text-muted-foreground">Location</p><p className="font-medium">{(viewPartner.location && typeof viewPartner.location.lat === 'number' && typeof viewPartner.location.lng === 'number') ? `${viewPartner.location.lat.toFixed(3)}, ${viewPartner.location.lng.toFixed(3)}` : '—'}</p></div>
                   </div>
-                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-                    <Button variant="outline" onClick={()=> setViewPartner(null)}>Close</Button>
-                  </DialogFooter>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between" />
                 </div>
               )}
             </DialogContent>

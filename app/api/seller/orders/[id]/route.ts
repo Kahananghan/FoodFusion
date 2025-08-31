@@ -17,13 +17,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const { status } = await request.json()
     
     // Get the restaurant for this seller
-    const restaurant = await Restaurant.findOne({ owner: decoded.userId })
+  // @ts-ignore suppress mongoose typing overload complexity
+  const restaurant = await Restaurant.findOne({ owner: decoded.userId })
     if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
     
     // Update order status
-    const order = await Order.findOneAndUpdate(
+  // @ts-ignore suppress mongoose typing overload complexity
+  const order = await Order.findOneAndUpdate(
       { _id: params.id, restaurant: restaurant.name },
       { status },
       { new: true }
@@ -31,6 +33,22 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Recalculate aggregates (match by name or id)
+    try {
+      const matchValues = [restaurant._id.toString(), restaurant.name]
+      // @ts-ignore
+  // @ts-ignore suppress mongoose typing overload complexity
+  const allOrders = await Order.find({ restaurant: { $in: matchValues } })
+      const totalOrders = allOrders.length
+      const deliveredRevenue = allOrders.reduce((s: number, o: any) => o.status === 'delivered' ? s + o.totalAmount : s, 0)
+      let changed = false
+      if (restaurant.totalOrders !== totalOrders) { restaurant.totalOrders = totalOrders; changed = true }
+      if (restaurant.revenue !== deliveredRevenue) { restaurant.revenue = deliveredRevenue; changed = true }
+      if (changed) await restaurant.save()
+    } catch (e) {
+      console.warn('Failed to update restaurant aggregates after status change', e)
     }
 
     return NextResponse.json({ message: 'Order status updated successfully', order })

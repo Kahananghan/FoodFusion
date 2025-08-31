@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
 import Restaurant from '@/models/Restaurant'
+import mongoose from 'mongoose'
 import User from '@/models/User'
 import jwt from 'jsonwebtoken'
 
@@ -19,26 +20,37 @@ export async function GET(request: NextRequest) {
     
   // @ts-ignore mongoose dynamic model typing
   const orders = await Order.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .lean()
+    .sort({ createdAt: -1 })
+    .lean()
 
-    // Collect unique restaurant ids (filter valid ObjectIds)
+  // Collect unique restaurant ids (filter valid ObjectIds)
   const restaurantIds: string[] = Array.from(new Set(orders.map((o: any) => o.restaurant).filter(Boolean))) as string[]
-    let restaurantMap: Record<string,string> = {}
-    if (restaurantIds.length) {
-      try {
-        // Some stored ids might be plain strings not valid ObjectIds, attempt both
-  const validIds = restaurantIds.filter((id: string) => (id && (id as any).length >= 12)) // heuristic
-  // @ts-ignore mongoose dynamic model typing
-  const docs = await Restaurant.find({ _id: { $in: validIds } }).select('_id name').lean()
-        restaurantMap = docs.reduce((acc: any, r: any) => { acc[r._id.toString()] = r.name; return acc }, {})
-      } catch (e) {
-        console.warn('Restaurant lookup failed', e)
-      }
+  let restaurantMap: Record<string,string> = {}
+  if (restaurantIds.length) {
+    try {
+      // Some stored ids might be plain strings not valid ObjectIds, attempt both
+      const validIds = restaurantIds.filter((id: string) => (id && (id as any).length >= 12)) // heuristic
+      // @ts-ignore mongoose dynamic model typing
+      const docs = await Restaurant.find({ _id: { $in: validIds } }).select('_id name').lean()
+      restaurantMap = docs.reduce((acc: any, r: any) => { acc[r._id.toString()] = r.name; return acc }, {})
+    } catch (e) {
+      console.warn('Restaurant lookup failed', e)
     }
+  }
 
-    const enriched = orders.map(o => ({ ...o, restaurantName: restaurantMap[o.restaurant]}))
-    return NextResponse.json({ orders: enriched })
+  // Ensure each item has menuItem.image in the response
+  const enriched = orders.map(o => ({
+    ...o,
+    restaurantName: restaurantMap[o.restaurant],
+    items: (o.items || []).map((item: any) => ({
+      ...item,
+      menuItem: {
+        ...item.menuItem,
+        image: item.menuItem?.image || ''
+      }
+    }))
+  }))
+  return NextResponse.json({ orders: enriched })
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json({ orders: [] })
@@ -55,10 +67,32 @@ export async function POST(request: NextRequest) {
     const subtotal = (body.items || []).reduce((sum: number, item: any) => {
       return sum + ((item.menuItem?.price || 0) * (item.quantity || 1))
     }, 0)
-    
-    // Apply delivery fee logic: free above ₹500
-    const deliveryFee = subtotal >= 500 ? 0 : 40
-    const totalAmount = subtotal + deliveryFee
+
+    // Resolve restaurant by id or name; normalize to id for storage going forward
+    let restaurantDoc: any = null
+    let restaurantRef: string | undefined = body.restaurant
+    if (restaurantRef) {
+      try {
+        const isValidId = typeof restaurantRef === 'string' && mongoose.Types.ObjectId.isValid(restaurantRef)
+        if (isValidId) {
+          // @ts-ignore overload typing noise
+          restaurantDoc = await (Restaurant as any).findById(restaurantRef).select('deliveryFee')
+        }
+        if (!restaurantDoc) {
+          // Try by name (case-insensitive)
+            const escaped = restaurantRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          // @ts-ignore overload typing noise
+          restaurantDoc = await (Restaurant as any).findOne({ name: { $regex: new RegExp('^' + escaped + '$', 'i') } }).select('deliveryFee name')
+        }
+        if (restaurantDoc?._id) {
+          restaurantRef = restaurantDoc._id.toString()
+        }
+      } catch (e) {
+        console.warn('Restaurant resolution failed', e)
+      }
+    }
+
+    const baseDeliveryFee = typeof restaurantDoc?.deliveryFee === 'number' ? restaurantDoc.deliveryFee : 40
     
     const token = request.cookies.get('token')?.value
     if (!token) {
@@ -107,29 +141,43 @@ export async function POST(request: NextRequest) {
     }
     // If client supplies combinedTotalAmount (sum of all restaurant orders from one checkout) use it to determine free delivery waiver
     let combinedTotalAmount = body.combinedTotalAmount
-    if (typeof combinedTotalAmount === 'number' && combinedTotalAmount >= 500) {
-      // Waive delivery fee for this split order as overall cart qualified
-      if (deliveryFee > 0) {
-        console.log('Waiving delivery fee due to combinedTotalAmount >=500')
-      }
-    } else {
+    const qualifiesByCombined = typeof combinedTotalAmount === 'number' && combinedTotalAmount >= 500
+    if (!qualifiesByCombined) {
       combinedTotalAmount = undefined
     }
 
+    const qualifiesBySubtotal = subtotal >= 500
+    const finalDeliveryFee = (qualifiesBySubtotal || qualifiesByCombined) ? 0 : baseDeliveryFee
+    if (finalDeliveryFee === 0 && baseDeliveryFee > 0) {
+      console.log('Waiving delivery fee', { qualifiesBySubtotal, qualifiesByCombined, baseDeliveryFee })
+    }
+
+    const totalAmount = subtotal + finalDeliveryFee
+
     const orderData = {
       user: userId,
-      restaurant: body.restaurant,
+      restaurant: restaurantRef,
       items: body.items || [],
-      totalAmount,
+  totalAmount, // final amount including (possibly waived) delivery fee
       deliveryAddress,
       status: body.status || 'confirmed',
-      deliveryFee: (combinedTotalAmount && combinedTotalAmount >= 500) ? 0 : deliveryFee,
+  deliveryFee: finalDeliveryFee,
       combinedTotalAmount,
       estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
     }
     const order = new Order(orderData)
     const savedOrder = await order.save()
     console.log('Order saved:', savedOrder)
+    // Increment restaurant aggregates immediately (monotonic add)
+  if (restaurantDoc?._id) {
+      try {
+        // Use $inc to avoid race conditions; use order total regardless of status
+  // @ts-ignore overload typing noise
+  await (Restaurant as any).updateOne({ _id: restaurantDoc._id }, { $inc: { totalOrders: 1, revenue: savedOrder.totalAmount } })
+      } catch (e) {
+        console.warn('Failed to increment restaurant aggregates on order create', e)
+      }
+    }
     return NextResponse.json({ order: savedOrder }, { status: 201 })
   } catch (error) {
     console.error('Order save error:', error)

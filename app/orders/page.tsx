@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from 'react'
-import { Clock, Truck, CheckCircle2, Hourglass, RefreshCw, Search, Package, ChevronDown, ChevronUp } from 'lucide-react'
+import { Clock, Truck, CheckCircle2, Hourglass, RefreshCw, Search, Package, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react'
 import Loader from '@/components/Loader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ interface Order {
     quantity: number
     price: number
     total: number
+    image?: string
   }>
   subtotal: number
   deliveryFee: number
@@ -27,6 +28,16 @@ interface Order {
   status: string
   orderDate: string
   combinedTotalAmount?: number
+  deliveryAddress?: {
+    name: string
+    phone: string
+    street: string
+    city: string
+    state: string
+    zipCode: string
+    landmark?: string
+    type?: string
+  }
 }
 
 export default function OrdersPage() {
@@ -54,14 +65,15 @@ export default function OrdersPage() {
             name: item.menuItem?.name || 'Item',
             quantity: item.quantity || 1,
             price: item.menuItem?.price || 0,
-            total: (item.menuItem?.price || 0) * (item.quantity || 1)
+            total: (item.menuItem?.price || 0) * (item.quantity || 1),
+            image: item.menuItem?.image || ''
           }))
-          
+
           const subtotal = items.reduce((sum, item) => sum + item.total, 0)
           // server may have waived fee if combinedTotalAmount >= 500
           const serverFee = typeof order.deliveryFee === 'number' ? order.deliveryFee : 40
           const deliveryFee = (order.combinedTotalAmount && order.combinedTotalAmount >= 500) ? 0 : (subtotal >= 500 ? 0 : serverFee)
-          
+
           // Normalize status: map legacy 'dispatched' -> 'out-for-delivery'
           let status: string = order.status || 'pending'
           if (status === 'dispatched') status = 'out-for-delivery'
@@ -76,7 +88,8 @@ export default function OrdersPage() {
             total: subtotal + deliveryFee,
             status,
             orderDate: order.createdAt || new Date().toISOString(),
-            combinedTotalAmount: order.combinedTotalAmount
+            combinedTotalAmount: order.combinedTotalAmount,
+            deliveryAddress: order.deliveryAddress || undefined
           }
         })
         setOrders(dbOrders)
@@ -234,7 +247,7 @@ export default function OrdersPage() {
                         </CardTitle>
                         <p className="text-xs text-gray-500">#{order.id.slice(-6)} • {order.items.length} item{order.items.length>1?'s':''} • {new Date(order.orderDate).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
                       </div>
-                      <div className="flex gap-6 text-sm">
+                      <div className="flex gap-3 text-sm items-center">
                         <div className="text-right">
                           <p className="text-[10px] uppercase tracking-wide text-gray-400">Total</p>
                           <p className="text-base font-semibold">₹{order.total}</p>
@@ -246,6 +259,56 @@ export default function OrdersPage() {
                         <Button variant="ghost" size="icon" className="h-8 w-8 mt-1" onClick={()=>setExpanded(prev=>{ const n = new Set(prev); n.has(order.id)? n.delete(order.id): n.add(order.id); return n })} aria-label="Toggle details">
                           {expanded.has(order.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
+                        {/* Cancel and Repeat Order buttons */}
+                        {(order.status !== 'cancelled') && (
+                          <>
+                            {["pending","confirmed","preparing"].includes(order.status) && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs px-3 py-1"
+                                disabled={refreshing}
+                                onClick={async () => {
+                                  setRefreshing(true)
+                                  try {
+                                    const res = await fetch(`/api/orders/${order.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ status: 'cancelled' })
+                                    })
+                                    if (!res.ok) throw new Error('Failed to cancel order')
+                                    await fetchOrders(true)
+                                  } catch (e) {
+                                    alert('Failed to cancel order. Please try again.')
+                                  } finally {
+                                    setRefreshing(false)
+                                  }
+                                }}
+                              >
+                                {refreshing ? 'Cancelling...' : 'Cancel'}
+                              </Button>
+                            )}
+                            {order.status === 'delivered' && (
+                              <Button variant="outline" size="sm" className="text-xs px-3 py-1" onClick={async () => {
+                                // Add each item from this order to the cart (one POST per item)
+                                for (const item of order.items) {
+                                  await fetch('/api/cart', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      name: item.name,
+                                      price: item.price,
+                                      quantity: item.quantity,
+                                      restaurant: order.restaurantName,
+                                      image: item.image || ''
+                                    })
+                                  })
+                                }
+                                window.location.href = '/cart'
+                              }}>Repeat Order</Button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -282,18 +345,6 @@ export default function OrdersPage() {
                                 <TableCell className="text-right font-medium">₹{it.total}</TableCell>
                               </TableRow>
                             ))}
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-right text-sm font-medium">Subtotal</TableCell>
-                              <TableCell className="text-right font-semibold">₹{order.subtotal}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-right text-sm font-medium">Delivery Fee</TableCell>
-                              <TableCell className={cn('text-right font-semibold', order.deliveryFee===0 && 'text-green-600')}>{order.deliveryFee===0 ? 'FREE' : `₹${order.deliveryFee}`}</TableCell>
-                            </TableRow>
-                            <TableRow className="bg-orange-50/60">
-                              <TableCell colSpan={3} className="text-right text-sm font-semibold">Total</TableCell>
-                              <TableCell className="text-right font-bold">₹{order.total}</TableCell>
-                            </TableRow>
                           </TableBody>
                         </Table>
                       </div>
@@ -305,6 +356,42 @@ export default function OrdersPage() {
                       {order.deliveryFee===0 && order.subtotal < 500 && order.combinedTotalAmount && order.combinedTotalAmount >= 500 && (
                         <div className="mt-3 flex items-center gap-2 text-xs font-medium text-green-600">
                           <CheckCircle2 className="h-4 w-4" /> Free delivery (overall cart ₹{order.combinedTotalAmount}+)
+                        </div>
+                      )}
+                      {order.deliveryAddress && (
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                          <div className="relative rounded-md border border-dashed border-orange-200 bg-orange-50/40 p-4 text-xs leading-relaxed">
+                            <div className="flex items-center gap-2 mb-1.5 text-orange-700 font-semibold text-[11px] uppercase tracking-wide">
+                              <MapPin className="h-3.5 w-3.5" /> Delivery Address
+                              {order.deliveryAddress.type && (
+                                <span className="ml-auto px-1.5 py-0.5 rounded bg-white/70 border border-orange-200 text-[10px] font-medium normal-case text-orange-600">
+                                  {order.deliveryAddress.type}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-medium text-gray-800 text-[13px]">{order.deliveryAddress.name}</p>
+                            <p className="text-gray-600">{order.deliveryAddress.street}</p>
+                            <p className="text-gray-600">{order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}</p>
+                            {order.deliveryAddress.landmark && (
+                              <p className="text-gray-500 italic">Near {order.deliveryAddress.landmark}</p>
+                            )}
+                            <p className="mt-2 flex items-center gap-1 text-gray-700 font-medium"><Phone className="h-3.5 w-3.5 text-orange-500" /> {order.deliveryAddress.phone}</p>
+                          </div>
+                          <div className="rounded-md border border-gray-200 bg-white p-4 text-xs space-y-3">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mb-1">Cost Breakdown</p>
+                              <ul className="space-y-1.5">
+                                <li className="flex justify-between"><span className="text-gray-500">Items ({order.items.length})</span><span className="font-medium">₹{order.subtotal}</span></li>
+                                <li className="flex justify-between"><span className="text-gray-500">Delivery Fee</span><span className={cn('font-medium', order.deliveryFee===0 && 'text-green-600')}>{order.deliveryFee===0 ? 'FREE' : `₹${order.deliveryFee}`}</span></li>
+                                <li className="flex justify-between border-t pt-1 mt-1"><span className="text-gray-700 font-semibold">Total Paid</span><span className="font-bold text-gray-900">₹{order.total}</span></li>
+                              </ul>
+                            </div>
+                            {order.deliveryFee===0 && (
+                              <div className="text-[10px] text-green-600 font-medium flex items-start gap-1">
+                                <CheckCircle2 className="h-3 w-3 mt-0.5" /> Free delivery savings applied.
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </CardContent>
