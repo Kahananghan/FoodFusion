@@ -83,12 +83,15 @@ export default function SellerDashboard() {
   const availableCount = menuItems.filter(mi=>mi.isAvailable).length
 
   // derived orders after filters
+  // Always show cancelled orders in the list, regardless of filter
   const filteredOrders = orders
-    .filter(o => orderSearch.trim()==='' ||
-      (o.orderNumber && o.orderNumber.toString().toLowerCase().includes(orderSearch.toLowerCase())) ||
-      (o.customer?.name && o.customer.name.toLowerCase().includes(orderSearch.toLowerCase()))
-    )
-    .filter(o => orderStatusFilter==='all' || o.status===orderStatusFilter)
+    .filter(o => {
+      const matchesSearch = orderSearch.trim()==='' ||
+        (o.orderNumber && o.orderNumber.toString().toLowerCase().includes(orderSearch.toLowerCase())) ||
+        (o.customer?.name && o.customer.name.toLowerCase().includes(orderSearch.toLowerCase()))
+  // Apply status filter (show all when filter is 'all')
+  return matchesSearch && (orderStatusFilter === 'all' || o.status === orderStatusFilter)
+    })
     .sort((a,b)=>{
       if (orderSort==='date') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       if (orderSort==='total') return (b.totalAmount||0) - (a.totalAmount||0)
@@ -228,9 +231,11 @@ export default function SellerDashboard() {
   }, [])
 
   const calculateStatsFromOrders = (ordersList = orders) => {
-    const delivered = ordersList.filter(o => o.status === 'delivered')
-    const totalOrders = ordersList.length
-    const totalRevenue = delivered.reduce((s, o) => s + (o.totalAmount || 0), 0)
+  // totalOrders should count all orders for this restaurant
+  const totalOrders = ordersList.length
+  // totalRevenue should include only delivered orders for this restaurant
+  const delivered = ordersList.filter(o => o.status === 'delivered')
+  const totalRevenue = delivered.reduce((s, o) => s + (o.totalAmount || 0), 0)
     setStats(s => ({ ...s, totalOrders, totalRevenue, avgRating: 4.2 }))
   }
 

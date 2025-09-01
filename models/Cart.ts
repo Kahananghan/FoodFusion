@@ -1,4 +1,13 @@
-import mongoose from 'mongoose'
+import mongoose, { Document, Model } from 'mongoose'
+
+interface ICart extends Document {
+  name: string
+  price: number
+  quantity: number
+  image?: string
+  restaurant: string
+  userId?: string
+}
 
 const CartSchema = new mongoose.Schema({
   name: {
@@ -30,4 +39,7 @@ const CartSchema = new mongoose.Schema({
   timestamps: true
 })
 
-export default mongoose.models.Cart || mongoose.model('Cart', CartSchema)
+// Ensure a properly typed model is exported to avoid TypeScript union-callable issues
+const Cart = (mongoose.models.Cart as Model<ICart>) || mongoose.model<ICart>('Cart', CartSchema)
+
+export default Cart

@@ -139,7 +139,7 @@ export default function OrdersPage() {
     cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: <RefreshCw className="h-3.5 w-3.5" /> },
   }
 
-  const totalSpent = useMemo(() => orders.reduce((s,o) => s + o.total, 0), [orders])
+  const totalSpent = useMemo(() => orders.filter(o => o.status === 'delivered').reduce((s,o) => s + o.total, 0), [orders])
   const deliveredCount = useMemo(() => orders.filter(o => o.status === 'delivered').length, [orders])
   const inProgressCount = useMemo(() => orders.filter(o => ['pending','confirmed','preparing','ready','out-for-delivery'].includes(o.status)).length, [orders])
 

@@ -22,12 +22,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
     
-    // Find orders for this restaurant
-  // @ts-ignore suppress mongoose typing overload complexity
-  const orders = await Order.find({ restaurant: restaurant.name })
+    // Find orders for this restaurant. Orders collection stores `restaurant` as ObjectId,
+    // so query by the restaurant._id to ensure we return all orders (including cancelled).
+    // @ts-ignore suppress mongoose typing overload complexity
+    // Orders historically stored `restaurant` as a string (name or ObjectId string).
+    // Query for any of: ObjectId, ObjectId string, or restaurant name to support mixed data.
+    const restaurantId = restaurant._id
+    const restaurantIdStr = restaurant._id.toString()
+    const restaurantName = restaurant.name
+    const orders = await Order.find({
+      $or: [
+        { restaurant: restaurantId },
+        { restaurant: restaurantIdStr },
+        { restaurant: restaurantName }
+      ]
+    })
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
-      .limit(50)
     
     // Transform orders for frontend
     const transformedOrders = orders.map(order => ({

@@ -223,9 +223,11 @@ export default function AdminDashboard() {
         const fetched = data.orders || []
         setOrders(fetched)
         // Compute average order value client-side (all orders). Adjust filter if only delivered orders are desired.
-        if (fetched.length) {
-          const sum = fetched.reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0)
-          const avg = sum / fetched.length
+        // Only include delivered orders in revenue and avg calculations
+        const deliveredOrders = fetched.filter((o: any) => o.status === 'delivered')
+        if (deliveredOrders.length) {
+          const sum = deliveredOrders.reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0)
+          const avg = sum / deliveredOrders.length
           setStats(prev => ({ ...prev, avgOrderValue: Math.round(avg), totalRevenue: Math.round(sum) }))
         } else {
           setStats(prev => ({ ...prev, avgOrderValue: 0, totalRevenue: 0 }))
@@ -1132,7 +1134,8 @@ export default function AdminDashboard() {
             {orderView === 'earnings' && (
               <div className="p-6 space-y-6">
                 {(() => {
-                  const totalRevenue = filteredOrders.reduce((s,o)=>s + (Number(o.total)||0),0)
+                  // Only sum delivered orders for revenue
+                  const totalRevenue = filteredOrders.filter(o => o.status === 'delivered').reduce((s,o)=>s + (Number(o.total)||0),0)
                   const platformRate = 0.05
                   const deliveryRate = 0.30
                   const platform = Math.round(totalRevenue * platformRate)
