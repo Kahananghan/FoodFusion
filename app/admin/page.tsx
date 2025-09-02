@@ -103,9 +103,9 @@ export default function AdminDashboard() {
     activeDeliveryPartners: 0,
     avgOrderValue: 0,
     completionRate: 0,
-    totalRevenue: 0 // will always be recalculated from deliveryPartners
+    totalRevenue: 0 
   })
-  // Entity view states
+ 
   const [viewUser, setViewUser] = useState<User | null>(null)
   const [viewRestaurant, setViewRestaurant] = useState<Restaurant | null>(null)
   const [restaurantLiveStats, setRestaurantLiveStats] = useState<{totalOrders:number;revenue:number} | null>(null)
@@ -139,13 +139,12 @@ export default function AdminDashboard() {
     fetchUserInfo()
   }, [])
 
-  // reset status filter when switching primary entity tabs
+
   useEffect(() => {
     setFilterStatus('all')
     setUserPage(1); setRestaurantPage(1); setOrderPage(1); setPartnerPage(1)
   }, [activeTab])
 
-                      {/* Removed stray rates paragraph misplaced earlier */}
   useEffect(() => { setUserPage(1); setRestaurantPage(1); setOrderPage(1); setPartnerPage(1) }, [searchTerm, filterStatus, pageSize])
 
   const clampPage = (page: number, total: number) => Math.min(Math.max(1, page), Math.max(1, total))
@@ -222,8 +221,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         const fetched = data.orders || []
         setOrders(fetched)
-        // Compute average order value client-side (all orders). Adjust filter if only delivered orders are desired.
-        // Only include delivered orders in revenue and avg calculations
+
         const deliveredOrders = fetched.filter((o: any) => o.status === 'delivered')
         if (deliveredOrders.length) {
           const sum = deliveredOrders.reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0)
@@ -248,7 +246,6 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (res.ok) {
         setDeliveryPartners(data.partners)
-  // Do not override totalRevenue here; it's derived from orders now
       }
     } catch (error) {
       toast.error('Failed to fetch delivery partners')
@@ -368,9 +365,7 @@ export default function AdminDashboard() {
       return da === db ? 0 : da < db ? -1 : 1
     }
     if (typeof a === 'number' && typeof b === 'number') return a === b ? 0 : a < b ? -1 : 1
-    // boolean
     if (typeof a === 'boolean' && typeof b === 'boolean') return a === b ? 0 : a ? 1 : -1
-    // fallback string compare (case-insensitive)
     return String(a).localeCompare(String(b), undefined, { sensitivity: 'accent', numeric: true })
   }
 
@@ -630,7 +625,18 @@ export default function AdminDashboard() {
     const d = new Date(today); d.setDate(d.getDate() - i); rangeLabels.push(formatLocalDate(d))
   }
   const rangeMap: Record<string,{date:string; orders:number; revenue:number}> = Object.fromEntries(rangeLabels.map(l=>[l,{date:l,orders:0,revenue:0}]))
-  orders.forEach(o=>{ const dt=new Date(o.createdAt); if(dt>=start && dt<end) { const k=formatLocalDate(dt); if(rangeMap[k]) { rangeMap[k].orders+=1; rangeMap[k].revenue+= Number(o.total)||0 } } })
+  // Only include delivered orders in analytics (revenue/orders counts)
+  orders.forEach(o => {
+    if (o.status !== 'delivered') return
+    const dt = new Date(o.createdAt)
+    if (dt >= start && dt < end) {
+      const k = formatLocalDate(dt)
+      if (rangeMap[k]) {
+        rangeMap[k].orders += 1
+        rangeMap[k].revenue += Number(o.total) || 0
+      }
+    }
+  })
   const dailySeries = rangeLabels.map(l=>rangeMap[l])
   // shape for OrdersRevenueChart
   const ordersRevenueData = dailySeries.map(d => ({ date: d.date, orders: d.orders, revenue: d.revenue }))

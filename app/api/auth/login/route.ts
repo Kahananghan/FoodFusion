@@ -34,10 +34,11 @@ export async function POST(request: NextRequest) {
   await user.save()
 
   // Create JWT token
+    // Shorter-lived token for improved security (2 hours)
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET!,
-      { expiresIn: '1d' }
+      { expiresIn: '2h' }
     )
     
     
@@ -50,12 +51,13 @@ export async function POST(request: NextRequest) {
       token
     })
     
-    // Set HTTP-only cookie
+    // Set HTTP-only cookie (maxAge is in seconds)
     response.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 1 days
+      path: '/',
+      maxAge: 2 * 60 * 60 // 2 hours in seconds
     })
     
     

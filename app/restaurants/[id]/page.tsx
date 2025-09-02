@@ -157,8 +157,6 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   const removeFromCart = (itemId: string) => {
-    // NOTE: Avoid side-effects inside setState functional updater to prevent
-    // double execution under React Strict Mode (which caused duplicate toasts).
     const current = cart[itemId] || 0
     const newCount = Math.max(current - 1, 0)
 
@@ -190,7 +188,6 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
         }).then(() => window.dispatchEvent(new Event('cartUpdated')))
       }
     } else {
-      // If we don't have ID yet, attempt a background sync
       syncCartFromServer()
     }
   }
@@ -221,37 +218,56 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
       {restaurant && (
         <>
           {/* Hero Section */}
-          <div className="relative h-96 flex items-end justify-center">
-            <Image
-              src={restaurant.featured_image}
-              alt={restaurant.name}
-              fill
-              className="object-cover h-full w-full rounded-3xl"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent rounded-3xl" />
-            <Card className="absolute left-1/3 -translate-x-1/2 bottom-0 translate-y-1/2 w-[95vw] max-w-3xl shadow-2xl border-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl">
-              <CardContent className="py-6 px-8 flex flex-col md:flex-row md:items-center gap-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white mb-1">{restaurant.name}</h1>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-white text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 border border-orange-100 dark:border-neutral-700">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="font-medium text-sm">{restaurant.user_rating.aggregate_rating}</span>
-                    </Badge>
-                    <span className="text-gray-600 text-base">{restaurant.user_rating.rating_text}</span>
+          <div className="relative group h-[260px] md:h-[360px] lg:h-[420px] flex items-end justify-center">
+            <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-inner">
+              <Image
+                  src={restaurant.featured_image || ''}
+                  alt={restaurant.name}
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
+                  quality={80}
+                  style={{ objectFit: 'cover', objectPosition: 'center' }}
+                  className="transform transition-transform duration-500 hover:scale-[1.02] filter brightness-90 contrast-105"
+               />
+              {/* linear dark gradient + subtle radial vignette to focus center */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.45),rgba(0,0,0,0.0)_40%)]" />
+            </div>
+            {/* mobile overlay title for stronger immediate impression */}
+            <div className="absolute left-1/2 top-6 -translate-x-1/2 md:hidden text-center px-4">
+              <h2 className="text-xl font-bold text-white drop-shadow-lg">{restaurant.name}</h2>
+              <p className="text-sm text-white/80 mt-1">{restaurant.cuisines}</p>
+            </div>
+
+            <Card className="absolute left-4 md:left-8 lg:left-8 bottom-4 translate-y-1/2 md:translate-y-2 w-[95vw] md:w-[72%] lg:w-[65%] max-w-5xl shadow-3xl border-0 bg-transparent backdrop-blur-none transition-transform duration-400 pointer-events-none">
+              <CardContent className="py-6 px-4 md:px-8 flex flex-col md:flex-row md:items-center gap-4 pointer-events-auto">
+                <div className="hidden md:flex items-center justify-center w-20 h-20 rounded-full overflow-hidden ring-2 ring-white/30 flex-shrink-0">
+                  <Image src={restaurant.featured_image || ''} alt={`${restaurant.name} thumbnail`} width={80} height={80} className="object-cover w-full h-full" />
+                </div>
+                <div className="flex-1 text-white">
+                  <h1 className="text-3xl md:text-3xl lg:text-4xl font-extrabold mb-1 tracking-tight drop-shadow-lg">{restaurant.name}</h1>
+                  <div className="flex items-center gap-3 mb-2 text-sm text-white/90">
+                    <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-md">
+                      <Star className="h-4 w-4 text-yellow-400" />
+                      <span className="font-medium">{restaurant.user_rating.aggregate_rating}</span>
+                    </div>
+                    <span className="text-white/80">{restaurant.user_rating.rating_text}</span>
+                    <span className="text-white/40">•</span>
+                    <span className="text-white/80">{restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}</span>
                   </div>
-                  <p className="text-neutral-700 dark:text-neutral-200 flex items-center text-base">
-                    <MapPin className="h-5 w-5 mr-2 text-orange-500" />
-                    {restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}
-                  </p>
-                  <p className="text-sm text-orange-700 mt-1">{restaurant.cuisines}</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {restaurant.cuisines?.split(',').slice(0,3).map((c,i) => (
+                      <span key={i} className="text-[13px] px-2 py-1 bg-white/10 text-white rounded-md">{c.trim()}</span>
+                    ))}
+                    <span className="ml-2 text-sm text-white/70">• Avg ₹{restaurant.average_cost_for_two}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 pt-32 pb-12 grid lg:grid-cols-3 gap-10">
+          <div id="menu" className="max-w-7xl mx-auto px-4 pt-24 pb-12 grid lg:grid-cols-3 gap-10">
             {/* Menu Section */}
             <div className="lg:col-span-2">
               <div className="flex items-center mb-8">
