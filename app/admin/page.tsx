@@ -1134,8 +1134,10 @@ export default function AdminDashboard() {
             {orderView === 'earnings' && (
               <div className="p-6 space-y-6">
                 {(() => {
-                  // Only sum delivered orders for revenue
-                  const totalRevenue = filteredOrders.filter(o => o.status === 'delivered').reduce((s,o)=>s + (Number(o.total)||0),0)
+                  // Use persisted restaurant.revenue (delivered-only) from the server
+                  // Respect current restaurant search/filter by using filteredRestaurants
+                  const sourceRestaurants = filteredRestaurants
+                  const totalRevenue = sourceRestaurants.reduce((s, r: any) => s + (Number(r.revenue) || 0), 0)
                   const platformRate = 0.05
                   const deliveryRate = 0.30
                   const platform = Math.round(totalRevenue * platformRate)
@@ -1147,14 +1149,7 @@ export default function AdminDashboard() {
                     { label: 'Delivery (30%)', value: delivery, colors: 'from-green-400 to-green-600' },
                     { label: 'Other', value: other, colors: 'from-sky-400 to-sky-600' }
                   ]
-                  const byRestaurant: Record<string,{restaurant:string;orders:number;revenue:number}> = {}
-                  filteredOrders.forEach(o=>{
-                    const r = o.restaurant?.name || 'Unknown'
-                    if(!byRestaurant[r]) byRestaurant[r] = { restaurant: r, orders:0, revenue:0 }
-                    byRestaurant[r].orders += 1
-                    byRestaurant[r].revenue += Number(o.total)||0
-                  })
-                  const restRows = Object.values(byRestaurant).sort((a,b)=>b.revenue-a.revenue)
+                  const restRows = sourceRestaurants.map(r => ({ restaurant: r.name, orders: r.totalOrders || 0, revenue: Number(r.revenue) || 0 })).sort((a,b) => b.revenue - a.revenue)
                   return (
                     <>
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -1164,7 +1159,7 @@ export default function AdminDashboard() {
                             <div className="text-lg font-semibold tabular-nums">₹{b.value.toLocaleString()}</div>
                             {b.label !== 'Total Revenue' && totalRevenue>0 && (
                               <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                                <div className={`h-full bg-gradient-to-r ${b.colors}`} style={{ width: ((b.value/totalRevenue)*100).toFixed(2)+'%' }} />
+                                <div className={`h-full bg-gradient-to-r ${b.colors}`} style={{ width: ((b.value/totalRevenue)*100).toFixed(2) + '%' }} />
                               </div>
                             )}
                           </div>
@@ -1184,7 +1179,7 @@ export default function AdminDashboard() {
                           </thead>
                           <tbody>
                             {restRows.length === 0 && (
-                              <tr><td colSpan={6} className="text-center py-6 text-xs text-muted-foreground">No order data</td></tr>
+                              <tr><td colSpan={6} className="text-center py-6 text-xs text-muted-foreground">No restaurant revenue data</td></tr>
                             )}
                             {restRows.map(r => {
                               const pf = r.revenue * platformRate

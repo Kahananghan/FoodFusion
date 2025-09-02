@@ -270,8 +270,7 @@ export default function DeliveryDashboard() {
     .sort((a,b)=> amountDesc ? Number(b.totalAmount) - Number(a.totalAmount) : Number(a.totalAmount) - Number(b.totalAmount))
 
   if (process.env.NODE_ENV !== 'production') {
-    // debug order sequence once per render (can be removed later)
-    console.debug('[AvailableOrders] Sorted by amount', amountDesc ? 'desc' : 'asc', filteredAvailable.map(o => o.totalAmount))
+    // debug order sequence suppressed
   }
 
   return (
@@ -730,6 +729,4 @@ const OrderProgress = ({ steps, current }: { steps: string[]; current: number })
     </div>
   )
 }
-
-// (RadialProgress removed as per request)
  

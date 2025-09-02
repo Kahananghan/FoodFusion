@@ -65,10 +65,11 @@ export async function GET(request: NextRequest) {
       let totalOrders = typeof r.totalOrders === 'number' ? r.totalOrders : 0
       let revenue = typeof r.revenue === 'number' ? r.revenue : 0
 
-      // If persisted is behind aggregated, update document (best effort, non-blocking)
-      if (combinedOrders > totalOrders || combinedRevenueAll > revenue) {
-        totalOrders = Math.max(totalOrders, combinedOrders)
-        revenue = Math.max(revenue, combinedRevenueAll)
+      // Persist accurate aggregates: totalOrders (non-cancelled) and revenue (delivered-only)
+      // Use combinedDeliveredRevenue for revenue (do not count non-delivered/cancelled orders)
+      if (combinedOrders !== totalOrders || combinedDeliveredRevenue !== revenue) {
+        totalOrders = combinedOrders
+        revenue = combinedDeliveredRevenue
         try {
           r.totalOrders = totalOrders
           r.revenue = revenue
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return {
+  return {
         _id: r._id,
         name: r.name,
         description: r.description,
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
         createdAt: r.createdAt,
         owner: r.owner,
   totalOrders,
-  revenue, // total revenue across all orders (any status)
+  revenue, // delivered-only revenue (backend aggregated)
   deliveredRevenue: combinedDeliveredRevenue,
         averageRating: r.averageRating || 0,
         totalReviews: r.totalReviews || 0,

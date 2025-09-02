@@ -54,6 +54,18 @@ export interface CartItem {
   restaurant: Restaurant
 }
 
+// Simple cart item shape used by the embedded User.cart in the database
+export interface SimpleCartItem {
+  _id?: string
+  name: string
+  price: number
+  quantity: number
+  image?: string
+  restaurant: string
+  createdAt?: Date
+  updatedAt?: Date
+}
+
 export interface Order {
   _id: string
   user: User
@@ -70,4 +82,9 @@ export interface Order {
   deliveryFee: number
   createdAt: Date
   estimatedDeliveryTime: Date
+}
+
+// Extend User interface with optional cart embedded items
+export interface UserWithCart extends User {
+  cart?: SimpleCartItem[]
 }

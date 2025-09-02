@@ -100,7 +100,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
 
   const syncCartFromServer = async () => {
     try {
-      const res = await fetch('/api/cart')
+  const res = await fetch('/api/cart', { credentials: 'include' })
       if (!res.ok) return
       const data = await res.json()
       if (!data.success || !Array.isArray(data.cartItems)) return
@@ -126,7 +126,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
 
   const addToCart = async (itemId: string) => {
     const item = menuItems.find(m => m.id === itemId)
-    if (!item) return
+  if (!item) return
 
     try {
       const success = await addToCartDB({
@@ -171,7 +171,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
     const cartItemId = cartIds[itemId]
     if (cartItemId) {
       if (newCount === 0) {
-        fetch(`/api/cart?id=${cartItemId}`, { method: 'DELETE' })
+        fetch(`/api/cart?id=${cartItemId}`, { method: 'DELETE', credentials: 'include' })
           .then(res => {
             if (res.ok) {
               toast.success('Item removed from cart')
@@ -184,6 +184,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
       } else {
         fetch('/api/cart', {
           method: 'PUT',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: cartItemId, quantity: newCount })
         }).then(() => window.dispatchEvent(new Event('cartUpdated')))

@@ -29,20 +29,23 @@ export async function GET(request: NextRequest) {
   const computedDeliveredRevenue = orders.reduce((sum, order) => order.status === 'delivered' ? sum + order.totalAmount : sum, 0)
     const activeMenuItems = restaurant.menu.filter(item => item.isAvailable).length
 
+    // Use computed values (accurate snapshot) for the response. Persist exact values so DB stays consistent
     const stats = {
-      // Prefer persisted values; fall back to computed if missing.
-      totalOrders: typeof restaurant.totalOrders === 'number' ? restaurant.totalOrders : computedTotalOrders,
-      totalRevenue: typeof restaurant.revenue === 'number' ? restaurant.revenue : computedDeliveredRevenue,
+      totalOrders: computedTotalOrders,
+      totalRevenue: computedDeliveredRevenue,
       activeMenuItems,
       avgRating: restaurant.rating || 4.5
     }
-    // Only update if persisted values are behind (monotonic increase) to avoid overwriting newer updates elsewhere
+
+    // Reconcile persisted restaurant aggregates to match computed values. Update if different.
     try {
       let changed = false
-      if (restaurant.totalOrders < computedTotalOrders) { restaurant.totalOrders = computedTotalOrders; changed = true }
-      if (restaurant.revenue < computedDeliveredRevenue) { restaurant.revenue = computedDeliveredRevenue; changed = true }
+      if (restaurant.totalOrders !== computedTotalOrders) { restaurant.totalOrders = computedTotalOrders; changed = true }
+      if (restaurant.revenue !== computedDeliveredRevenue) { restaurant.revenue = computedDeliveredRevenue; changed = true }
       if (changed) await restaurant.save()
-    } catch (e) { console.warn('Non-fatal: seller stats monotonic sync failed', e) }
+    } catch (e) {
+      console.warn('Non-fatal: seller stats sync failed', e)
+    }
 
     return NextResponse.json({ stats })
   } catch (error) {

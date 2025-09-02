@@ -56,7 +56,7 @@ export default function OrdersPage() {
   const fetchOrders = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const response = await fetch('/api/orders')
+      const response = await fetch('/api/orders', { credentials: 'include' })
       
       if (response.ok) {
         const data = await response.json()  
@@ -273,6 +273,7 @@ export default function OrdersPage() {
                                   try {
                                     const res = await fetch(`/api/orders/${order.id}`, {
                                       method: 'PUT',
+                                      credentials: 'include',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ status: 'cancelled' })
                                     })
@@ -292,7 +293,8 @@ export default function OrdersPage() {
                               <Button variant="outline" size="sm" className="text-xs px-3 py-1" onClick={async () => {
                                 // Add each item from this order to the cart (one POST per item)
                                 for (const item of order.items) {
-                                  await fetch('/api/cart', {
+                                    await fetch('/api/cart', {
+                                      credentials: 'include',
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({

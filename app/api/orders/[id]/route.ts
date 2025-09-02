@@ -24,22 +24,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (order.status === 'cancelled') {
       return NextResponse.json({ error: 'Order already cancelled' }, { status: 400 })
     }
-    // Decrease restaurant revenue if not already cancelled
-    if (order.status !== 'cancelled') {
-      // Find the restaurant and decrease revenue
-      const Restaurant = (await import('@/models/Restaurant')).default
-      let restaurantId = order.restaurant
-      // Convert to ObjectId if possible
-      if (restaurantId && mongoose.Types.ObjectId.isValid(restaurantId)) {
-        restaurantId = new mongoose.Types.ObjectId(restaurantId)
-      }
-      await Restaurant.updateOne(
-        { _id: restaurantId },
-        { $inc: { revenue: -order.totalAmount, totalOrders: -1 } }
-      )
-    }
+    // Mark order cancelled
     order.status = 'cancelled'
     await order.save()
+
+    // Recalculate restaurant aggregates to keep counts consistent
+    try {
+      const Restaurant = (await import('@/models/Restaurant')).default
+      let restaurantId = order.restaurant
+      if (restaurantId && mongoose.Types.ObjectId.isValid(restaurantId)) {
+        restaurantId = restaurantId.toString()
+      }
+      // Count only non-cancelled orders and sum delivered totals
+      const matchValues = [restaurantId]
+      const relatedOrders = await (await import('@/models/Order')).default.find({ restaurant: { $in: matchValues } })
+      const totalOrders = relatedOrders.filter((o: any) => o.status !== 'cancelled').length
+      const deliveredRevenue = relatedOrders.reduce((s: number, o: any) => o.status === 'delivered' ? s + o.totalAmount : s, 0)
+      await Restaurant.updateOne({ _id: restaurantId }, { $set: { totalOrders, revenue: deliveredRevenue } })
+    } catch (e) {
+      console.warn('Failed to recalc restaurant aggregates after cancellation', e)
+    }
     return NextResponse.json({ success: true, order })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to cancel order' }, { status: 500 })

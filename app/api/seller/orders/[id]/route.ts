@@ -25,8 +25,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     
     // Update order status
   // @ts-ignore suppress mongoose typing overload complexity
+  const matchValues = [restaurant._id, restaurant._id.toString(), restaurant.name]
+  // @ts-ignore
   const order = await Order.findOneAndUpdate(
-      { _id: params.id, restaurant: restaurant.name },
+      { _id: params.id, restaurant: { $in: matchValues } },
       { status },
       { new: true }
     )
@@ -41,7 +43,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       // @ts-ignore
   // @ts-ignore suppress mongoose typing overload complexity
   const allOrders = await Order.find({ restaurant: { $in: matchValues } })
-      const totalOrders = allOrders.length
+  // Count only non-cancelled orders as 'totalOrders'
+  const totalOrders = allOrders.filter((o: any) => o.status !== 'cancelled').length
       const deliveredRevenue = allOrders.reduce((s: number, o: any) => o.status === 'delivered' ? s + o.totalAmount : s, 0)
       let changed = false
       if (restaurant.totalOrders !== totalOrders) { restaurant.totalOrders = totalOrders; changed = true }

@@ -103,8 +103,6 @@ export async function POST(request: NextRequest) {
     const userId = decoded.userId
     
   let deliveryAddress = body.deliveryAddress;
-  // Debug: log type and value
-  console.log('DEBUG deliveryAddress before save:', typeof deliveryAddress, deliveryAddress);
   // @ts-ignore mongoose dynamic model typing
   const user = await User.findById(userId);
     if (!deliveryAddress || typeof deliveryAddress === 'string') {
@@ -147,9 +145,15 @@ export async function POST(request: NextRequest) {
     }
 
     const qualifiesBySubtotal = subtotal >= 500
-    const finalDeliveryFee = (qualifiesBySubtotal || qualifiesByCombined) ? 0 : baseDeliveryFee
+    // For orders below ₹500, use a flat delivery fee of ₹40 (do not use restaurant-configured lower/higher fees)
+    let finalDeliveryFee: number
+    if (qualifiesBySubtotal || qualifiesByCombined) {
+      finalDeliveryFee = 0
+    } else {
+      finalDeliveryFee = 40
+    }
     if (finalDeliveryFee === 0 && baseDeliveryFee > 0) {
-      console.log('Waiving delivery fee', { qualifiesBySubtotal, qualifiesByCombined, baseDeliveryFee })
+      // delivery fee waived; no log required in production
     }
 
     const totalAmount = subtotal + finalDeliveryFee
@@ -158,26 +162,89 @@ export async function POST(request: NextRequest) {
       user: userId,
       restaurant: restaurantRef,
       items: body.items || [],
-  totalAmount, // final amount including (possibly waived) delivery fee
+      totalAmount,
       deliveryAddress,
       status: body.status || 'confirmed',
-  deliveryFee: finalDeliveryFee,
+      deliveryFee: finalDeliveryFee,
       combinedTotalAmount,
       estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
     }
     const order = new Order(orderData)
-    const savedOrder = await order.save()
-    console.log('Order saved:', savedOrder)
-    // Increment restaurant aggregates immediately (monotonic add)
+  const savedOrder = await order.save()
+  
   if (restaurantDoc?._id) {
-      try {
-        // Use $inc to avoid race conditions; use order total regardless of status
-  // @ts-ignore overload typing noise
-  await (Restaurant as any).updateOne({ _id: restaurantDoc._id }, { $inc: { totalOrders: 1, revenue: savedOrder.totalAmount } })
+  try {
+  const incObj: any = {}
+  if (savedOrder.status !== 'cancelled') incObj.totalOrders = 1
+  if (savedOrder.status === 'delivered') incObj.revenue = savedOrder.totalAmount
+  if (Object.keys(incObj).length > 0) {
+    await (Restaurant as any).updateOne({ _id: restaurantDoc._id }, { $inc: incObj })
+  }
       } catch (e) {
         console.warn('Failed to increment restaurant aggregates on order create', e)
       }
     }
+    try {
+  const orderedItems = savedOrder.items || body.items || []
+      if (user && Array.isArray(user.cart)) {
+  // current user.cart snapshot suppressed in logs
+        let modified = false
+        for (const oi of orderedItems) {
+          // Prefer removing by original cart item id if available
+          const cartItemId = oi.cartItemId || oi.cartItem || oi._id
+          const qtyOrdered = Number(oi.quantity || 1)
+          if (cartItemId) {
+            const itemDoc: any = user.cart.id ? user.cart.id(cartItemId) : null
+            if (itemDoc) {
+              if ((itemDoc.quantity || 0) > qtyOrdered) {
+                itemDoc.quantity = (itemDoc.quantity || 0) - qtyOrdered
+                itemDoc.updatedAt = new Date()
+              } else {
+                itemDoc.remove()
+              }
+              modified = true
+              continue
+            } else {
+              // cartItemId provided but not found on user.cart
+            }
+          }
+
+          // Fallback: match by name + restaurant
+          const menu = oi.menuItem || {}
+          const itemName = menu.name || oi.name
+          const itemQty = qtyOrdered
+          const itemRestaurant = savedOrder.restaurant || oi.restaurant || body.restaurant
+          if (!itemName) continue
+          const idx = user.cart.findIndex((ci: any) => ci && ci.name === itemName && ci.restaurant === itemRestaurant)
+          if (idx === -1) {
+            // fallback match not found for name
+            continue
+          }
+          const cartItem = user.cart[idx]
+          if (cartItem.quantity > itemQty) {
+            cartItem.quantity = cartItem.quantity - itemQty
+            cartItem.updatedAt = new Date()
+            modified = true
+          } else {
+            user.cart.splice(idx, 1)
+            modified = true
+          }
+        }
+        if (modified) {
+          user.markModified && user.markModified('cart')
+          try {
+            await user.save()
+          } catch (e) {
+            console.warn('[orders POST] Failed to save user after clearing cart items', e)
+          }
+        } else {
+          // No matching items found in user cart to clear
+        }
+      }
+    } catch (e) {
+      console.warn('[orders POST] Error while clearing ordered items from cart', e)
+    }
+
     return NextResponse.json({ order: savedOrder }, { status: 201 })
   } catch (error) {
     console.error('Order save error:', error)

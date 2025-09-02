@@ -33,7 +33,7 @@ export default function Navbar() {
   useEffect(() => {
     const updateCartCount = async () => {
       try {
-        const response = await fetch('/api/cart')
+        const response = await fetch('/api/cart', { credentials: 'include' })
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.cartItems) {
@@ -51,7 +51,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' })
+  const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       if (res.ok) {
         authLogout()
         toast.error('Logged out successfully')

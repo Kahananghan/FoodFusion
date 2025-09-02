@@ -13,6 +13,7 @@ export const addToCart = async (item: CartItem) => {
   try {
     const response = await fetch('/api/cart', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json'
       },
@@ -44,7 +45,7 @@ export const addToCart = async (item: CartItem) => {
 
 export const getCartItems = async () => {
   try {
-    const response = await fetch('/api/cart')
+  const response = await fetch('/api/cart', { credentials: 'include' })
     if (response.ok) {
       const data = await response.json()
       return data.success ? data.cartItems : []

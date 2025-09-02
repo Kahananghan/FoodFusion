@@ -112,7 +112,7 @@ export default function CartPage() {
 
   const fetchCartItems = async () => {
     try {
-      const response = await fetch('/api/cart')
+    const response = await fetch('/api/cart', { credentials: 'include' })
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.cartItems) {
@@ -149,6 +149,7 @@ export default function CartPage() {
     try {
       const response = await fetch('/api/cart', {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, quantity: newQuantity })
       })
@@ -171,7 +172,8 @@ export default function CartPage() {
   const removeItem = async (id: string) => {
     try {
       const response = await fetch(`/api/cart?id=${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       })
 
       if (response.ok) {
@@ -190,7 +192,7 @@ export default function CartPage() {
   const clearCartFromDatabase = async () => {
     try {
       for (const item of cartItems) {
-        await fetch(`/api/cart?id=${item.id}`, { method: 'DELETE' })
+  await fetch(`/api/cart?id=${item.id}`, { method: 'DELETE', credentials: 'include' })
       }
     } catch (error) {
       console.error('Error clearing cart from database:', error)
@@ -221,9 +223,10 @@ export default function CartPage() {
         const orderData = {
           restaurant,
             items: itemsForRestaurant.map(item => ({
-            menuItem: { name: item.name, price: item.price, image: item.image },
-            quantity: item.quantity
-          })),
+              menuItem: { name: item.name, price: item.price, image: item.image },
+              quantity: item.quantity,
+              cartItemId: item.id // include original cart item id so server can remove by id
+            })),
           totalAmount: subtotalLocal + deliveryFeeLocal,
           deliveryAddress,
           status: 'confirmed',
@@ -233,6 +236,7 @@ export default function CartPage() {
 
         const response = await fetch('/api/orders', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
         })

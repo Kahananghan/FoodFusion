@@ -15,12 +15,22 @@ const AddressSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
+const CartItemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  quantity: { type: Number, required: true, default: 1 },
+  image: { type: String, default: '' },
+  restaurant: { type: String, required: true }
+}, { timestamps: true })
+
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: String,
   addresses: [AddressSchema],
+  // Embedded cart items (moved from separate Cart model into User)
+  cart: { type: [CartItemSchema], default: [] },
   role: { 
     type: String, 
     enum: ['customer', 'restaurant', 'admin', 'delivery'], 
