@@ -618,7 +618,6 @@ export default function AdminDashboard() {
   const start = new Date(today); start.setDate(start.getDate() - (analyticsRange - 1))
   // Use an exclusive upper bound (start of tomorrow) so we include all timestamps from today
   const end = new Date(today); end.setDate(end.getDate() + 1)
-  // Local (non-UTC) date formatter to avoid losing the 31st due to timezone shifts when using toISOString
   const formatLocalDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   const rangeLabels: string[] = []
   for (let i = analyticsRange - 1; i >= 0; i--) {
@@ -638,7 +637,7 @@ export default function AdminDashboard() {
     }
   })
   const dailySeries = rangeLabels.map(l=>rangeMap[l])
-  // shape for OrdersRevenueChart
+
   const ordersRevenueData = dailySeries.map(d => ({ date: d.date, orders: d.orders, revenue: d.revenue }))
   const barData = dailySeries.map(d=>({ date: d.date, delivered: d.orders }))
   const totalOrdersRange = dailySeries.reduce((a,b)=>a+b.orders,0)

@@ -69,6 +69,10 @@ export default function SellerDashboard() {
   const [reportRange, setReportRange] = useState<'7d'|'30d'|'all'>('30d')
   const [reportSort, setReportSort] = useState<'date'|'total'>('date')
   const [reportSearch, setReportSearch] = useState('')
+  // pagination
+  const [pageSize, setPageSize] = useState(10)
+  const [orderPage, setOrderPage] = useState(1)
+  const [reportPage, setReportPage] = useState(1)
 
   const filteredMenu = menuItems
     .filter(mi => menuSearch.trim()==='' || mi.name.toLowerCase().includes(menuSearch.toLowerCase()) || mi.category.toLowerCase().includes(menuSearch.toLowerCase()))
@@ -237,6 +241,42 @@ export default function SellerDashboard() {
   const delivered = ordersList.filter(o => o.status === 'delivered')
   const totalRevenue = delivered.reduce((s, o) => s + (o.totalAmount || 0), 0)
     setStats(s => ({ ...s, totalOrders, totalRevenue, avgRating: 4.2 }))
+  }
+
+  // pagination helpers (same behavior as admin panel)
+  const clampPage = (page: number, total: number) => Math.min(Math.max(1, page), Math.max(1, total))
+  const paginate = <T,>(data: T[], page: number, size: number) => {
+    const totalPages = Math.ceil(data.length / size) || 1
+    const current = clampPage(page, totalPages)
+    const start = (current - 1) * size
+    return { slice: data.slice(start, start + size), totalPages, current, total: data.length }
+  }
+
+  const PageControls = ({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) => {
+    if (totalPages <= 1) return null
+    const pages: (number | '…')[] = []
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) pages.push(p)
+      else if (pages[pages.length - 1] !== '…') pages.push('…')
+    }
+    return (
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-3 py-3 border-t bg-gray-50/60 dark:bg-gray-800/40">
+        <div className="text-xs text-muted-foreground">Page {page} of {totalPages}</div>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="outline" className="h-8 px-2" disabled={page === 1} onClick={() => onChange(page - 1)}>Prev</Button>
+          {pages.map((p, i) => p === '…' ? (
+            <span key={i} className="px-2 text-xs text-muted-foreground">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onChange(p as number)}
+              className={`h-8 min-w-8 px-2 rounded-md text-xs font-medium border transition ${p === page ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-800'}`}
+            >{p}</button>
+          ))}
+          <Button size="sm" variant="outline" className="h-8 px-2" disabled={page === totalPages} onClick={() => onChange(page + 1)}>Next</Button>
+        </div>
+      </div>
+    )
   }
 
   const handleOrderStatusUpdate = async (orderId: string, status: string) => { try { const r = await fetch(`/api/seller/orders/${orderId}`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); if (r.ok) { toast.success('Order updated'); fetchOrders() } else { const d = await r.json().catch(()=>null); toast.error(d?.error || 'Update failed') } } catch { toast.error('Error') } }
@@ -596,9 +636,9 @@ export default function SellerDashboard() {
                   
                   {/* Toolbar */}
                   <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex flex-wrap gap-3 items-center justify-between">
                       <div className="relative w-full sm:w-64">
-                        <Input className="pl-8 h-9 text-sm border-green-300 focus-visible:ring-green-500" placeholder="Search order # or customer..." value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
+                        <Input className="pl-8 h-9 text-sm border-green-300 focus-visible:ring-green-500" placeholder="Search order # or customer..." value={orderSearch} onChange={e=>{ setOrderSearch(e.target.value); setOrderPage(1) }} />
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       </div>
                       <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
@@ -606,14 +646,21 @@ export default function SellerDashboard() {
                           <button key={v} onClick={()=>setOrderStatusFilter(v)} className={`px-3 h-8 rounded-full border text-[11px] font-medium capitalize transition ${orderStatusFilter===v? 'bg-green-600 text-white border-green-600 shadow-sm':'bg-white dark:bg-gray-900 text-gray-600 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>{v}</button>
                         ))}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center  gap-1">
                         {(['date','total'] as const).map(v=> (
                           <button key={v} onClick={()=>setOrderSort(v)} className={`px-3 h-8 rounded-md border text-[11px] font-medium capitalize transition ${orderSort===v? 'bg-green-600 text-white border-green-600 shadow-sm':'bg-white dark:bg-gray-900 text-gray-600 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>{v}</button>
                         ))}
                       </div>
                       {(orderSearch || orderStatusFilter!=='all' || orderSort!=='date') && (
-                        <button onClick={()=>{setOrderSearch(''); setOrderStatusFilter('all'); setOrderSort('date')}} className="ml-auto text-[11px] px-3 h-8 rounded-md border bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600">Clear</button>
+                        <button onClick={()=>{setOrderSearch(''); setOrderStatusFilter('all'); setOrderSort('date'); setOrderPage(1)}} className="ml-auto text-[11px] px-3 h-8 rounded-md border bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600">Clear</button>
                       )}
+                      <select
+                        value={pageSize}
+                        onChange={(e) => { setPageSize(Number(e.target.value)); setOrderPage(1); setReportPage(1) }}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60"
+                      >
+                        {[5,10,20,50].map(n => <option key={n} value={n}>{n} / page</option>)}
+                      </select>
                     </div>
                   </div>
                   {orders.length === 0 ? (
@@ -621,8 +668,12 @@ export default function SellerDashboard() {
                   ) : filteredOrders.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground text-sm border border-dashed rounded-lg bg-white/50 dark:bg-gray-900/30">No orders match filters</div>
                   ) : (
-                    <div className="rounded-lg border overflow-auto max-h-[65vh]">
-                      <Table className="min-w-[880px]">
+                    (() => {
+                      const orderPaginated = paginate(filteredOrders, orderPage, pageSize)
+                      return (
+                        <>
+                        <div className="rounded-lg border overflow-auto max-h-[65vh]">
+                          <Table className="min-w-[880px]">
                         <TableHeader>
                           <TableRow className="bg-gray-50/80 sticky top-0 z-10">
                             <TableHead className="w-[200px]">Order # / Date</TableHead>
@@ -633,8 +684,8 @@ export default function SellerDashboard() {
                             <TableHead className="text-right w-[220px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
-                        <TableBody>
-                          {filteredOrders.map(order => {
+                          <TableBody>
+                          {orderPaginated.slice.map(order => {
                             const shortId = order.orderNumber || order._id.slice(-6)
                             const created = new Date(order.createdAt).toLocaleString()
                             const status: string = order.status
@@ -694,8 +745,12 @@ export default function SellerDashboard() {
                             )
                           })}
                         </TableBody>
-                      </Table>
-                    </div>
+                          </Table>
+                        </div>
+                        <PageControls page={orderPaginated.current} totalPages={orderPaginated.totalPages} onChange={setOrderPage} />
+                        </>
+                      )
+                    })()
                   )}
                 </CardContent>
               </Card>
@@ -723,8 +778,15 @@ export default function SellerDashboard() {
                       </div>
                       <Button size="sm" variant="outline" className="h-8 px-3 gap-2" onClick={exportReportsCsv}><Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span></Button>
                       {(reportSearch || reportRange!=='30d' || reportSort!=='date') && (
-                        <button onClick={()=>{setReportSearch(''); setReportRange('30d'); setReportSort('date')}} className="h-8 px-3 rounded-md border bg-white dark:bg-gray-900 text-[11px] text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
+                        <button onClick={()=>{setReportSearch(''); setReportRange('30d'); setReportSort('date'); setReportPage(1)}} className="h-8 px-3 rounded-md border bg-white dark:bg-gray-900 text-[11px] text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
                       )}
+                      <select
+                        value={pageSize}
+                        onChange={(e) => { setPageSize(Number(e.target.value)); setReportPage(1); setOrderPage(1) }}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60"
+                      >
+                        {[5,10,20,50].map(n => <option key={n} value={n}>{n} / page</option>)}
+                      </select>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -742,8 +804,12 @@ export default function SellerDashboard() {
                   ) : rangeFilteredDelivered.length === 0 ? (
                     <div className="py-12 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-white/50 dark:bg-gray-900/30">No results for current filters</div>
                   ) : (
-                    <div className="rounded-lg border overflow-auto max-h-[60vh]">
-                      <Table className="min-w-[820px]">
+                    (() => {
+                      const reportPaginated = paginate(rangeFilteredDelivered, reportPage, pageSize)
+                      return (
+                        <>
+                        <div className="rounded-lg border overflow-auto max-h-[60vh]">
+                          <Table className="min-w-[820px]">
                         <TableHeader>
                           <TableRow className="bg-gray-50/80 sticky top-0 z-10">
                             <TableHead className="w-[140px]">Order # / Date</TableHead>
@@ -769,8 +835,12 @@ export default function SellerDashboard() {
                             )
                           })}
                         </TableBody>
-                      </Table>
-                    </div>
+                          </Table>
+                        </div>
+                        <PageControls page={reportPaginated.current} totalPages={reportPaginated.totalPages} onChange={setReportPage} />
+                        </>
+                      )
+                    })()
                   )}
                 </CardContent>
               </Card>
