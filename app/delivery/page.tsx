@@ -219,22 +219,18 @@ export default function DeliveryDashboard() {
     const days = Array.from({ length: 7 }).map((_, i) => {
       const d = new Date(today); d.setDate(d.getDate() - (6 - i))
       const key = fmtLocal(d) // local yyyy-mm-dd (no UTC shift)
-      const deliveredCount = deliveryHistory.filter(o => {
+      // Count only orders that are marked 'delivered' and whose delivered date matches the key
+      const deliveredOnly = deliveryHistory.filter(o => o.status === 'delivered')
+      const deliveredCount = deliveredOnly.filter(o => {
         const dt = new Date(o.updatedAt || o.createdAt)
         const local = new Date(dt); local.setHours(0,0,0,0)
         return fmtLocal(local) === key
       }).length
       return { date: key, delivered: deliveredCount }
     })
-    const allZero = days.every(d => d.delivered === 0)
-    // If no delivered history yet, create a soft placeholder trend using total deliveries stat (if any)
-    if (allZero && stats.totalDeliveries > 0) {
-      // Simulate a distribution tapering toward today
-      const base = Math.max(1, stats.totalDeliveries)
-      const weights = [0.6,0.7,0.8,0.9,1,0.85,0.95]
-      const scale = base / weights.reduce((a,b)=>a+b,0)
-      days.forEach((d,i)=> { d.delivered = Math.max(1, Math.round(weights[i]*scale)) })
-    }
+  const allZero = days.every(d => d.delivered === 0)
+  // NOTE: We intentionally do NOT synthesize non-zero placeholder values here.
+  // The chart should reflect actual delivered counts in the 7-day window.
     const max = Math.max(1, ...days.map(d=>d.delivered))
     return { days, max, allZero }
   })()
@@ -335,8 +331,8 @@ export default function DeliveryDashboard() {
                     {performanceSeries.allZero && stats.totalDeliveries === 0 && (
                       <p className="mt-3 text-[10px] text-muted-foreground">No delivered orders yet — start completing deliveries to see real performance data.</p>
                     )}
-                    {performanceSeries.allZero === false && stats.totalDeliveries > 0 && deliveryHistory.length === 0 && (
-                      <p className="mt-3 text-[10px] text-indigo-600/80 dark:text-indigo-300/80">Showing provisional trend (no dated delivery history received yet).</p>
+                    {performanceSeries.allZero && stats.totalDeliveries > 0 && deliveryHistory.length === 0 && (
+                      <p className="mt-3 text-[10px] text-indigo-600/80 dark:text-indigo-300/80">You have deliveries in your account but no dated delivery history available for the 7 day window.</p>
                     )}
                   </CardContent>
                 </Card>

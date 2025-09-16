@@ -28,7 +28,6 @@ async function dbConnect() {
           const redacted = MONGODB_URI.replace(/:\\?[^:@/]+@/, ':***@')
           // Log once
           if (!(global as any)._mongoLogged) {
-            console.log('[MongoDB] Connected to', mongoose.connection.name, 'via', redacted)
             ;(global as any)._mongoLogged = true
           }
         } catch {}

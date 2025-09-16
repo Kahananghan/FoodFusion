@@ -26,18 +26,23 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
     setLoading(true)
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      // Simulate payment processing / order placement
+      await new Promise(resolve => setTimeout(resolve, 1200))
+
+      // For COD we don't process payment; we mark order as pending payment on delivery
       const paymentData = {
         paymentMethod,
         amount: totalAmount,
         transactionId: `txn_${Date.now()}`,
-        status: 'paid'
+        status: paymentMethod === 'cod' ? 'pending' : 'paid'
       }
 
       onPaymentSuccess(paymentData)
-      toast.success('Payment successful!')
+      if (paymentMethod === 'cod') {
+        toast.success('Order placed. Pay on delivery.')
+      } else {
+        toast.success('Payment successful!')
+      }
       onClose()
     } catch (error) {
       toast.error('Payment failed. Please try again.')
@@ -98,10 +103,21 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
               />
               <span className="text-blue-600 font-bold">PayPal</span>
             </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cod"
+                checked={paymentMethod === 'cod'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="mr-3"
+              />
+              <span className="text-gray-800 font-medium">Cash on Delivery (COD)</span>
+            </label>
           </div>
         </div>
 
-        {paymentMethod === 'card' && (
+  {paymentMethod === 'card' && (
           <form onSubmit={handlePayment} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -185,6 +201,19 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
           >
             {loading ? 'Processing...' : `Pay with PayPal - ₹${totalAmount}`}
           </button>
+        )}
+
+        {paymentMethod === 'cod' && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-700">You will pay ₹{totalAmount} in cash to the delivery partner when your order arrives.</p>
+            <button
+              onClick={handlePayment}
+              disabled={loading}
+              className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Placing order...' : `Confirm COD - ₹${totalAmount}`}
+            </button>
+          </div>
         )}
 
         <div className="mt-4 text-center text-sm text-gray-500">
