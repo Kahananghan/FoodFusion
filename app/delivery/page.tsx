@@ -229,8 +229,6 @@ export default function DeliveryDashboard() {
       return { date: key, delivered: deliveredCount }
     })
   const allZero = days.every(d => d.delivered === 0)
-  // NOTE: We intentionally do NOT synthesize non-zero placeholder values here.
-  // The chart should reflect actual delivered counts in the 7-day window.
     const max = Math.max(1, ...days.map(d=>d.delivered))
     return { days, max, allZero }
   })()

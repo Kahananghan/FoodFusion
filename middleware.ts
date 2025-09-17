@@ -20,7 +20,6 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   if ((isProtectedRoute || isProtectedApiRoute) && !token) {
-    console.log('Middleware - No token, redirecting to login')
     if (isProtectedApiRoute) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }

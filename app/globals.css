@@ -69,7 +69,7 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-  overflow-x: hidden; /* prevent horizontal scroll caused by dropdowns / transforms */
+  overflow-x: hidden; 
 }
 
 a {
