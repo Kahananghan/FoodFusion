@@ -151,6 +151,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center space-x-3 group" aria-label="FoodFusion Home">
+              <img src="/icons8-dish-100.png" alt="FoodFusion logo" className="h-14 w-14 rounded-md object-cover drop-shadow-sm" />
               <div className="flex flex-col leading-tight">
                 <span className="text-2xl font-extrabold bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent tracking-tight">FoodFusion</span>
                 <span className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold">Fast • Fresh • Delivered</span>

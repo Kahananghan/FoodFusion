@@ -19,6 +19,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/icons8-dish-100.png" />
+      </head>
       <body className={inter.className} suppressHydrationWarning={true}>
         <AuthProvider>
           <Navbar />
