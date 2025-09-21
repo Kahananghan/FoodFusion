@@ -29,6 +29,18 @@ export const addToCart = async (item: CartItem) => {
 
     if (response.ok) {
       toast.success('Item added to cart!')
+      try {
+        const data = await response.json()
+        if (data && data.notification) {
+          try {
+            window.dispatchEvent(new CustomEvent('notificationReceived', { detail: data.notification }))
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
       return true
     } else {
       toast.error('Failed to add item to cart')

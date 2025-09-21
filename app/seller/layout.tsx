@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import './seller.css'
 
 export const metadata: Metadata = {
   title: 'FoodFusion - Seller Panel',

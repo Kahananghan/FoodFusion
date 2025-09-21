@@ -5,6 +5,8 @@ import Restaurant from '@/models/Restaurant'
 import mongoose from 'mongoose'
 import User from '@/models/User'
 import jwt from 'jsonwebtoken'
+import { broadcast } from '@/lib/notificationServer'
+// notifications are embedded in User model now
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,16 +25,26 @@ export async function GET(request: NextRequest) {
     .sort({ createdAt: -1 })
     .lean()
 
-  // Collect unique restaurant ids (filter valid ObjectIds)
+  // Collect unique restaurant identifiers (could be ObjectId or a plain name/string)
   const restaurantIds: string[] = Array.from(new Set(orders.map((o: any) => o.restaurant).filter(Boolean))) as string[]
   let restaurantMap: Record<string,string> = {}
   if (restaurantIds.length) {
     try {
-      // Some stored ids might be plain strings not valid ObjectIds, attempt both
-      const validIds = restaurantIds.filter((id: string) => (id && (id as any).length >= 12)) // heuristic
-      // @ts-ignore mongoose dynamic model typing
-      const docs = await Restaurant.find({ _id: { $in: validIds } }).select('_id name').lean()
-      restaurantMap = docs.reduce((acc: any, r: any) => { acc[r._id.toString()] = r.name; return acc }, {})
+      // Separate valid ObjectId values from plain string names to avoid BSON casting errors
+      const objectIds = restaurantIds.filter(id => mongoose.Types.ObjectId.isValid(String(id))).map(id => new mongoose.Types.ObjectId(String(id)))
+      const names = restaurantIds.filter(id => !mongoose.Types.ObjectId.isValid(String(id)))
+
+      // Build a safe query that only uses ObjectId values for _id and string values for name
+      const orClauses: any[] = []
+      if (objectIds.length) orClauses.push({ _id: { $in: objectIds } })
+      if (names.length) orClauses.push({ name: { $in: names } })
+
+      if (orClauses.length > 0) {
+        const query = orClauses.length === 1 ? orClauses[0] : { $or: orClauses }
+        // @ts-ignore mongoose dynamic model typing
+        const docs = await Restaurant.find(query).select('_id name').lean()
+        restaurantMap = docs.reduce((acc: any, r: any) => { acc[r._id.toString()] = r.name; return acc }, {})
+      }
     } catch (e) {
       console.warn('Restaurant lookup failed', e)
     }
@@ -171,6 +183,36 @@ export async function POST(request: NextRequest) {
     }
     const order = new Order(orderData)
   const savedOrder = await order.save()
+
+    // Broadcast order confirmation notification to user
+    try {
+      const payload = {
+        id: savedOrder._id?.toString?.() || Date.now().toString(),
+        type: 'order',
+        title: 'Order Confirmed',
+        message: `Your order #${(savedOrder._id || '').toString().slice(-6)} has been received.`,
+        timestamp: new Date(),
+        actionUrl: `/orders`,
+        targetUser: userId
+      }
+      try {
+        if (user) {
+          user.notifications = user.notifications || []
+          user.notifications.push({
+            type: payload.type,
+            title: payload.title,
+            message: payload.message,
+            actionUrl: payload.actionUrl
+          } as any)
+          await user.save()
+        }
+      } catch (e) {
+        console.warn('[orders POST] failed to persist notification on user', e)
+      }
+  broadcast('notification', payload)
+    } catch (e) {
+      console.warn('Failed to broadcast order notification', e)
+    }
   
   if (restaurantDoc?._id) {
   try {

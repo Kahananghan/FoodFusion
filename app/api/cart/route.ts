@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/mongodb'
 import User from '@/models/User'
 const UserModel: any = User
 import jwt from 'jsonwebtoken'
+import { broadcast } from '@/lib/notificationServer'
+// notifications are embedded in User model now
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,6 +57,34 @@ export async function POST(request: NextRequest) {
         try {
         await user.save()
         const cartItem = user.cart[existingIndex]
+        // Broadcast notification to the user about cart update
+        try {
+          const payload = {
+            id: cartItem._id?.toString?.() || Date.now().toString(),
+            type: 'order',
+            title: 'Cart Updated',
+            message: `${cartItem.name} quantity updated to ${cartItem.quantity}`,
+            timestamp: new Date(),
+            actionUrl: `/cart`,
+            targetUser: userId
+          }
+          try {
+            // persist notification embedded in user
+            user.notifications = user.notifications || []
+            user.notifications.push({
+              type: payload.type,
+              title: payload.title,
+              message: payload.message,
+              actionUrl: payload.actionUrl
+            } as any)
+            await user.save()
+          } catch (e) {
+            console.warn('[cart POST] failed to persist notification on user', e)
+          }
+          broadcast('notification', payload)
+        } catch (e) {
+          console.warn('Failed to broadcast cart update', e)
+        }
         return NextResponse.json({ success: true, cartItem })
       } catch (err) {
         console.error('[cart POST] failed saving incremented item', err)
@@ -75,7 +105,36 @@ export async function POST(request: NextRequest) {
       try {
         await user.save()
         const cartItem = user.cart[user.cart.length - 1]
-        return NextResponse.json({ success: true, cartItem })
+        // Broadcast notification to the user about new cart item
+        try {
+          const payload = {
+            id: cartItem._id?.toString?.() || Date.now().toString(),
+            type: 'order',
+            title: 'Added to Cart',
+            message: `${cartItem.name} was added to your cart.`,
+            timestamp: new Date(),
+            actionUrl: `/cart`,
+            targetUser: userId
+          }
+          try {
+            user.notifications = user.notifications || []
+            user.notifications.push({
+              type: payload.type,
+              title: payload.title,
+              message: payload.message,
+              actionUrl: payload.actionUrl
+            } as any)
+            await user.save()
+            // return minimal notification payload to client (no DB id here)
+            broadcast('notification', payload)
+            return NextResponse.json({ success: true, cartItem, notification: payload })
+          } catch (e) {
+            console.warn('Failed to persist/broadcast cart add', e)
+            return NextResponse.json({ success: true, cartItem })
+          }
+        } catch (e) {
+          console.warn('Failed to broadcast cart add', e)
+        }
       } catch (err) {
         console.error('[cart POST] failed saving new cart item', err)
         return NextResponse.json({ success: false, error: 'Failed to save cart item' }, { status: 500 })

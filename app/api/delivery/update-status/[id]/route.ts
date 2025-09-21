@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import User from '@/models/User'
+import { broadcast } from '@/lib/notificationServer'
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -25,7 +27,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    const order = await Order.findById(params.id)
+  // cast to any to avoid Mongoose TypeScript overload conflicts in this runtime
+  // @ts-ignore
+  const order = await (Order as any).findById(params.id)
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
@@ -37,6 +41,35 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     order.status = status
     await order.save()
+
+    // If order marked delivered, persist a notification for the order owner and broadcast
+    if (status === 'delivered') {
+      try {
+        const userId = order.user && order.user.toString ? order.user.toString() : order.user
+        if (userId) {
+          // @ts-ignore
+          const user = await (User as any).findById(userId)
+          if (user) {
+            user.notifications = user.notifications || []
+            const payload: any = {
+              id: order._id?.toString() || Date.now().toString(),
+              type: 'order',
+              title: 'Order Delivered',
+              message: `Your order #${(order._id || '').toString().slice(-6)} has been delivered.`,
+              timestamp: new Date(),
+              actionUrl: '/orders',
+              targetUser: userId
+            }
+            user.notifications.push({ type: payload.type, title: payload.title, message: payload.message, actionUrl: payload.actionUrl } as any)
+            await user.save()
+            // Broadcast to connected clients for this user
+            try { broadcast('notification', payload) } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        console.warn('[delivery PATCH] failed to persist/broadcast delivered notification', e)
+      }
+    }
 
     return NextResponse.json({ message: 'Order status updated', order })
   } catch (error) {
