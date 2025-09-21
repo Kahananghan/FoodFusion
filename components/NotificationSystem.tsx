@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Bell, X, Check, Clock, Truck } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 interface Notification {
   id: string
@@ -16,59 +20,150 @@ interface Notification {
 export default function NotificationSystem() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications])
+  const [connected, setConnected] = useState(false)
+  const { user } = useAuth()
 
   useEffect(() => {
-    // Simulate real-time notifications
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'order',
-        title: 'Order Confirmed',
-        message: 'Your order #12345 has been confirmed and is being prepared.',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-        read: false,
-        actionUrl: '/orders/12345'
-      },
-      {
-        id: '2',
-        type: 'delivery',
-        title: 'Out for Delivery',
-        message: 'Your order is on the way! Expected delivery in 15-20 minutes.',
-        timestamp: new Date(Date.now() - 10 * 60 * 1000),
-        read: false,
-        actionUrl: '/orders/12344'
-      },
-      {
-        id: '3',
-        type: 'promotion',
-        title: 'Special Offer',
-        message: 'Get 20% off on your next order. Use code SAVE20',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        read: true
+    // Fetch recent notifications on mount (in case SSE missed any)
+    const fetchInitial = async () => {
+      try {
+        
+        const res = await fetch('/api/notifications', { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          
+          if (Array.isArray(data.notifications)) {
+            const mapped = data.notifications.map((n: any) => ({
+              id: n._id,
+              type: n.type,
+              title: n.title,
+              message: n.message,
+              timestamp: n.createdAt ? new Date(n.createdAt) : new Date(),
+              read: !!n.read,
+              actionUrl: n.actionUrl
+            }))
+            
+            setNotifications(prev => {
+              // avoid duplicates by id
+              const ids = new Set(prev.map(p => p.id))
+              const dedup = mapped.filter((m: any) => !ids.has(m.id))
+              return [...dedup, ...prev]
+            })
+          }
+        }
+      } catch (e) {
+        console.warn('[notifications] fetchInitial failed', e)
+        // ignore
       }
-    ]
+    }
+    fetchInitial()
 
-    setNotifications(mockNotifications)
-    setUnreadCount(mockNotifications.filter(n => !n.read).length)
+    // Connect to server-sent events stream
+    let es: EventSource | null = null
+    let retryTimeout: number | null = null
 
-    // Simulate receiving new notifications
-    const interval = setInterval(() => {
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        type: 'system',
-        title: 'System Update',
-        message: 'New features have been added to improve your experience.',
-        timestamp: new Date(),
-        read: false
+    const connect = () => {
+      
+      // Force a reconnect by including a cache-busting query when user changes
+      const url = '/api/notifications/stream'
+      es = new EventSource(url)
+
+      es.onopen = () => {
+        setConnected(true)
       }
 
-      setNotifications(prev => [newNotification, ...prev])
-      setUnreadCount(prev => prev + 1)
-    }, 60000) // Every minute
+      es.onmessage = (e) => {
+        // default messages come as payload in e.data
+        try {
+          const payload = JSON.parse(e.data)
+          // If notification targets a specific user, ignore if not current user
+          if (payload && payload.id) {
+            if (payload.targetUser && user && payload.targetUser !== user._id) return
+            const incoming: Notification = {
+              id: payload.id ?? Date.now().toString(),
+              type: payload.type ?? 'system',
+              title: payload.title ?? 'Notification',
+              message: payload.message ?? '',
+              timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+              read: false,
+              actionUrl: payload.actionUrl
+            }
+            setNotifications(prev => [incoming, ...prev])
+          }
+        } catch (err) {
+          // ignore malformed messages
+        }
+      }
 
-    return () => clearInterval(interval)
-  }, [])
+      es.addEventListener('notification', (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse((e as MessageEvent).data)
+          if (payload.targetUser && user && payload.targetUser !== user._id) return
+          const incoming: Notification = {
+            id: payload.id ?? Date.now().toString(),
+            type: payload.type ?? 'system',
+            title: payload.title ?? 'Notification',
+            message: payload.message ?? '',
+            timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+            read: false,
+            actionUrl: payload.actionUrl
+          }
+          setNotifications(prev => [incoming, ...prev])
+        } catch (err) {
+          // ignore
+        }
+      })
+
+      es.onerror = (err) => {
+        console.warn('[notifications] EventSource error', err)
+        setConnected(false)
+        if (es) {
+          try { es.close() } catch (e) {}
+        }
+        // retry with backoff
+        if (retryTimeout) window.clearTimeout(retryTimeout)
+        retryTimeout = window.setTimeout(() => connect(), 3000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      if (es) try { es.close() } catch (e) {}
+      if (retryTimeout) window.clearTimeout(retryTimeout)
+    }
+  }, [user])
+
+  // Listen for in-app dispatched notifications (e.g., addToCart returns a notification)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const custom = e as CustomEvent
+        const payload = custom.detail
+        if (!payload) return
+        // If the notification targets a user, ignore when not matching
+        if (payload.targetUser && user && payload.targetUser !== user._id) return
+        const incoming: Notification = {
+          id: payload.id ?? payload._id ?? Date.now().toString(),
+          type: payload.type ?? 'system',
+          title: payload.title ?? 'Notification',
+          message: payload.message ?? '',
+          timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+          read: !!payload.read,
+          actionUrl: payload.actionUrl
+        }
+        setNotifications(prev => [incoming, ...prev])
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    window.addEventListener('notificationReceived', handler as EventListener)
+    return () => {
+      window.removeEventListener('notificationReceived', handler as EventListener)
+    }
+  }, [user])
 
   const markAsRead = (id: string) => {
     setNotifications(prev =>
@@ -76,21 +171,16 @@ export default function NotificationSystem() {
         notification.id === id ? { ...notification, read: true } : notification
       )
     )
-    setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
   const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, read: true }))
-    )
-    setUnreadCount(0)
+    // Clear the list so read notifications are not visible in the dropdown
+    setNotifications([])
   }
 
   const removeNotification = (id: string) => {
     const notification = notifications.find(n => n.id === id)
-    if (notification && !notification.read) {
-      setUnreadCount(prev => Math.max(0, prev - 1))
-    }
+    // unreadCount is derived from `notifications` so removing an unread item will update it automatically
     setNotifications(prev => prev.filter(n => n.id !== id))
   }
 
@@ -125,6 +215,7 @@ export default function NotificationSystem() {
       <button
         onClick={() => setShowNotifications(!showNotifications)}
         className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+        aria-label="Notifications"
       >
         <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
@@ -135,104 +226,76 @@ export default function NotificationSystem() {
       </button>
 
       {showNotifications && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-primary hover:text-orange-600"
-                >
-                  Mark all as read
-                </button>
-              )}
+        <Card className="absolute right-0 mt-2 w-96 z-50 shadow-lg border translate-x-52">
+          <CardHeader className="p-3 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5 text-gray-700" />
+                <h3 className="text-sm font-semibold">Notifications</h3>
+                <Badge variant="secondary" className="ml-2">{unreadCount} unread</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={markAllAsRead}>Mark all</Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => setShowNotifications(false)} aria-label="Close">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          </CardHeader>
 
-          <div className="max-h-96 overflow-y-auto">
+          <CardContent className="p-0 max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                <p>No notifications yet</p>
+                <p className="text-sm">You're all caught up</p>
+                <p className="text-xs text-gray-400 mt-1">No new notifications</p>
               </div>
             ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    !notification.read ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
-                    </div>
+              <div className="divide-y">
+                {notifications.map((notification) => (
+                  <div key={notification.id} className={`p-3 hover:bg-gray-50 flex gap-3 items-start ${!notification.read ? 'bg-blue-50' : 'bg-white'}`}>
+                    <div className="shrink-0 mt-1">{getNotificationIcon(notification.type)}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className={`text-sm font-medium ${
-                            !notification.read ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {notification.title}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            {formatTimestamp(notification.timestamp)}
-                          </p>
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="truncate">
+                          <p className={`text-sm font-medium truncate ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</p>
+                          <p className="text-xs text-gray-600 truncate mt-0.5">{notification.message}</p>
+                          <p className="text-[11px] text-gray-400 mt-1">{formatTimestamp(notification.timestamp)}</p>
                         </div>
-                        <div className="flex items-center space-x-1 ml-2">
+                        <div className="flex flex-col items-end gap-1">
                           {!notification.read && (
-                            <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="p-1 text-gray-400 hover:text-gray-600"
-                              title="Mark as read"
-                            >
+                            <Button size="icon" variant="ghost" onClick={() => markAsRead(notification.id)} aria-label="Mark as read">
                               <Check className="h-4 w-4" />
-                            </button>
+                            </Button>
                           )}
-                          <button
-                            onClick={() => removeNotification(notification.id)}
-                            className="p-1 text-gray-400 hover:text-gray-600"
-                            title="Remove notification"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+                          <Button size="icon" variant="ghost" onClick={() => removeNotification(notification.id)} aria-label="Remove">
+                            <X className="h-4 w-4 text-gray-500" />
+                          </Button>
                         </div>
                       </div>
+
                       {notification.actionUrl && (
-                        <a
-                          href={notification.actionUrl}
-                          className="inline-block mt-2 text-xs text-primary hover:text-orange-600"
-                          onClick={() => {
-                            markAsRead(notification.id)
-                            setShowNotifications(false)
-                          }}
-                        >
+                        <a href={notification.type === 'order' ? '/orders' : notification.actionUrl} className="text-xs text-primary hover:text-orange-600 inline-block mt-2" onClick={() => { markAsRead(notification.id); setShowNotifications(false) }}>
                           View Details →
                         </a>
                       )}
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
-          </div>
+          </CardContent>
 
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 text-center">
-              <a
-                href="/notifications"
-                className="text-sm text-primary hover:text-orange-600"
-                onClick={() => setShowNotifications(false)}
-              >
-                View All Notifications
-              </a>
-            </div>
+            <CardFooter className="p-3 border-t">
+              <div className="text-center w-full">
+                <a href="/notifications" className="text-sm text-primary hover:text-orange-600" onClick={() => setShowNotifications(false)}>View All Notifications</a>
+              </div>
+            </CardFooter>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )
