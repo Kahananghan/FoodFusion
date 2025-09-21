@@ -23,6 +23,14 @@ const CartItemSchema = new mongoose.Schema({
   restaurant: { type: String, required: true }
 }, { timestamps: true })
 
+const NotificationSchema = new mongoose.Schema({
+  type: { type: String, enum: ['order','delivery','promotion','system'], default: 'system' },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  actionUrl: { type: String },
+  read: { type: Boolean, default: false }
+}, { timestamps: true })
+
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -53,6 +61,9 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: Date,
   totalOrders: { type: Number, default: 0 }
+  ,
+  // Embedded notifications for the user
+  notifications: { type: [NotificationSchema], default: [] }
 }, {
   timestamps: true
 })
