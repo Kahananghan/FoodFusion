@@ -25,11 +25,9 @@ export default function Loader({ fullscreen = false, message }: LoaderProps) {
           {/* Outer rotating ring / plate */}
           <div className="relative w-40 h-40">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary via-orange-400 to-primary animate-spin-slow shadow-3xl p-[6px]">
-              <div className="w-full h-full rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center border border-orange-200/60">
-                <span className="text-4xl font-extrabold bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent tracking-tight select-none">
-                  FF
-                </span>
-              </div>
+                <div className="w-full h-full rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center border border-orange-200/60">
+                  <img src="/icons8-dish-100.png" alt="FoodFusion logo" className="w-24 h-24 object-contain" />
+                </div>
             </div>
 
             {/* Orbiting dots (ingredients) */}
