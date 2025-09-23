@@ -19,11 +19,22 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
     cvv: '',
     cardholderName: ''
   })
+  const [upiId, setUpiId] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    // Basic UPI ID validation when UPI is selected
+    if (paymentMethod === 'upi') {
+      const upiPattern = /^[\w.-]{2,256}@[a-zA-Z]{2,64}$/
+      if (!upiId || !upiPattern.test(upiId)) {
+        setLoading(false)
+        toast.error('Please enter a valid UPI ID (e.g. example@bank)')
+        return
+      }
+    }
 
     try {
       // Simulate payment processing / order placement
@@ -34,7 +45,8 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
         paymentMethod,
         amount: totalAmount,
         transactionId: `txn_${Date.now()}`,
-        status: paymentMethod === 'cod' ? 'pending' : 'paid'
+        status: paymentMethod === 'cod' ? 'pending' : 'paid',
+        upiId: paymentMethod === 'upi' ? upiId : undefined
       }
 
       onPaymentSuccess(paymentData)
@@ -96,12 +108,12 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
               <input
                 type="radio"
                 name="paymentMethod"
-                value="paypal"
-                checked={paymentMethod === 'paypal'}
+                value="upi"
+                checked={paymentMethod === 'upi'}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="mr-3"
               />
-              <span className="text-blue-600 font-bold">PayPal</span>
+              <span className="text-green-600 font-bold">UPI</span>
             </label>
             <label className="flex items-center">
               <input
@@ -193,14 +205,29 @@ export default function PaymentModal({ isOpen, onClose, totalAmount, onPaymentSu
           </form>
         )}
 
-        {paymentMethod === 'paypal' && (
-          <button
-            onClick={handlePayment}
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Processing...' : `Pay with PayPal - ₹${totalAmount}`}
-          </button>
+        {paymentMethod === 'upi' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
+              <input
+                type="text"
+                required
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="example@bank"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p className="text-sm text-gray-500 mt-1">Enter your UPI ID (e.g. example@bank)</p>
+            </div>
+
+            <button
+              onClick={handlePayment}
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : `Pay with UPI - ₹${totalAmount}`}
+            </button>
+          </div>
         )}
 
         {paymentMethod === 'cod' && (
