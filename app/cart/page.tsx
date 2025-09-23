@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { MouseEvent } from 'react'
 import { Plus, Minus, Trash2, MapPin, Loader2, ShoppingCart, Home, Building2, MapPinned } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -378,7 +379,7 @@ export default function CartPage() {
                                 <p className="text-[11px] text-gray-500 line-clamp-2">{addr.street}, {addr.city}, {addr.state} - {addr.zipCode}</p>
                                 <p className="text-[11px] text-gray-400">{addr.phone}</p>
                               </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); deleteAddress(addr._id) }}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={(e: MouseEvent) => { e.stopPropagation(); deleteAddress(addr._id) }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>

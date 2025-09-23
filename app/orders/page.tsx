@@ -69,7 +69,7 @@ export default function OrdersPage() {
             image: item.menuItem?.image || ''
           }))
 
-          const subtotal = items.reduce((sum, item) => sum + item.total, 0)
+          const subtotal = items.reduce((sum: number, item: { total: number }) => sum + item.total, 0)
           // server may have waived fee if combinedTotalAmount >= 500
           const serverFee = typeof order.deliveryFee === 'number' ? order.deliveryFee : 40
           const deliveryFee = (order.combinedTotalAmount && order.combinedTotalAmount >= 500) ? 0 : (subtotal >= 500 ? 0 : serverFee)

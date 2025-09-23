@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           city: 'Mumbai'
         }
       },
-      items: order.items.map(item => ({
+      items: order.items.map((item: any)=> ({
         name: item.menuItem?.name || 'Item',
         quantity: item.quantity
       })),

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const computedTotalOrders = orders.length
   // Use delivered revenue for consistency with seller UI (delivered orders only)
   const computedDeliveredRevenue = orders.reduce((sum, order) => order.status === 'delivered' ? sum + order.totalAmount : sum, 0)
-    const activeMenuItems = restaurant.menu.filter(item => item.isAvailable).length
+    const activeMenuItems = restaurant.menu.filter((item: any) => item.isAvailable).length
 
     // Use computed values (accurate snapshot) for the response. Persist exact values so DB stays consistent
     const stats = {
