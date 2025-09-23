@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ShoppingCart, User, Search, LogOut, Settings, Menu, X, MapPin, Phone, ClipboardList, Store, Bike, Users2, ChevronDown, Loader2, History } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import type { FocusEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from '@/components/CustomToaster'
 import NotificationSystem from './NotificationSystem'
@@ -97,7 +98,7 @@ export default function Navbar() {
         if (!active) return
         const list = (data.restaurants || []).map((r: any) => ({ id: r.id, name: r.name, cuisines: r.cuisines || '' }))
         const cuisineTokens = new Set<string>()
-        list.forEach(r => r.cuisines.split(',').forEach((c: string) => { const token = c.trim(); if (token) cuisineTokens.add(token) }))
+        list.forEach((r:any) => r.cuisines.split(',').forEach((c: string) => { const token = c.trim(); if (token) cuisineTokens.add(token) }))
         const restSuggestions = list.slice(0, 6).map((r: any) => ({ id: r.id, name: r.name, type: 'restaurant' as const }))
         const cuisineSuggestions = Array.from(cuisineTokens).filter(c => c.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 6).map(c => ({ id: c, name: c, type: 'cuisine' as const }))
         setSuggestions([...restSuggestions, ...cuisineSuggestions])
@@ -108,7 +109,7 @@ export default function Navbar() {
 
   // Global shortcuts
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const handler = (e: globalThis.KeyboardEvent) => {
       const target = e.target as HTMLElement
       const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
       if (!isTyping && (e.key === '/' || (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)))) { e.preventDefault(); setSearchOpen(true) }
@@ -177,8 +178,8 @@ export default function Navbar() {
               {user ? (
                 <div ref={userMenuRef} className="relative" onMouseEnter={() => setUserMenuOpen(true)} onMouseLeave={() => setUserMenuOpen(false)}>
                   <Button variant="ghost" className="group flex items-center gap-2 px-2 pr-3 rounded-full bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-haspopup="menu" aria-expanded={userMenuOpen}
-                    onFocus={() => setUserMenuOpen(true)} onBlur={e => { if (!(e.relatedTarget && userMenuRef.current?.contains(e.relatedTarget as Node))) setUserMenuOpen(false) }}
-                    onKeyDown={e => { if (e.key === 'Escape') setUserMenuOpen(false); if ((e.key === 'Enter' || e.key === ' ') && !userMenuOpen) { e.preventDefault(); setUserMenuOpen(true) } }}>
+                    onFocus={() => setUserMenuOpen(true)} onBlur={(e: FocusEvent<HTMLButtonElement>) => { if (!(e.relatedTarget && userMenuRef.current?.contains(e.relatedTarget as Node))) setUserMenuOpen(false) }}
+                    onKeyDown={(e: ReactKeyboardEvent<HTMLButtonElement>) => { if (e.key === 'Escape') setUserMenuOpen(false); if ((e.key === 'Enter' || e.key === ' ') && !userMenuOpen) { e.preventDefault(); setUserMenuOpen(true) } }}>
                     <div className="relative h-10 w-10">
                       <div className={`absolute inset-0 rounded-full p-[2px] transition-all duration-300 ${userMenuOpen ? 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 shadow-[0_0_0_3px_rgba(255,107,53,0.25)]' : 'bg-gradient-to-br from-orange-300/40 via-orange-400/30 to-orange-500/40 opacity-0 group-hover:opacity-100'}`}></div>
                       <Avatar className="relative h-full w-full rounded-full bg-white shadow-sm ring-1 ring-orange-200 group-hover:ring-orange-300 transition-all"><AvatarFallback className="text-[12px] font-semibold tracking-wide text-orange-600 bg-gradient-to-br from-orange-50 to-orange-100">{user.name?.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase() || 'U'}</AvatarFallback></Avatar>
