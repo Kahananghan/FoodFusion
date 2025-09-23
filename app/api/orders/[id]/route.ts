@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import Restaurant from '../../../../models/Restaurant'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 
@@ -30,17 +31,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Recalculate restaurant aggregates to keep counts consistent
     try {
-      const Restaurant = (await import('@/models/Restaurant')).default
-      let restaurantId = order.restaurant
-      if (restaurantId && mongoose.Types.ObjectId.isValid(restaurantId)) {
-        restaurantId = restaurantId.toString()
+  const rawRestaurantId = order.restaurant
+      if (!rawRestaurantId) {
+        // nothing to do when order has no restaurant reference
+      } else {
+        // Ensure we have a string representation to validate
+        const restaurantIdStr = typeof rawRestaurantId === 'string' ? rawRestaurantId : rawRestaurantId?.toString?.()
+        if (!restaurantIdStr || !mongoose.Types.ObjectId.isValid(restaurantIdStr)) {
+          console.warn('Invalid restaurant id on order, skipping aggregates update', restaurantIdStr)
+        } else {
+          const restaurantObjectId = new mongoose.Types.ObjectId(restaurantIdStr)
+
+          // Efficient: count non-cancelled orders and aggregate delivered revenue in the DB
+          const totalOrders = await Order.countDocuments({ restaurant: restaurantObjectId, status: { $ne: 'cancelled' } })
+          const revenueAgg: any[] = await Order.aggregate([
+            { $match: { restaurant: restaurantObjectId, status: 'delivered' } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+          ])
+          const deliveredRevenue = (revenueAgg[0] && revenueAgg[0].total) ? revenueAgg[0].total : 0
+
+          await Restaurant.updateOne({ _id: restaurantObjectId }, { $set: { totalOrders, revenue: deliveredRevenue } })
+        }
       }
-      // Count only non-cancelled orders and sum delivered totals
-      const matchValues = [restaurantId]
-      const relatedOrders = await (await import('@/models/Order')).default.find({ restaurant: { $in: matchValues } })
-      const totalOrders = relatedOrders.filter((o: any) => o.status !== 'cancelled').length
-      const deliveredRevenue = relatedOrders.reduce((s: number, o: any) => o.status === 'delivered' ? s + o.totalAmount : s, 0)
-      await Restaurant.updateOne({ _id: restaurantId }, { $set: { totalOrders, revenue: deliveredRevenue } })
     } catch (e) {
       console.warn('Failed to recalc restaurant aggregates after cancellation', e)
     }
