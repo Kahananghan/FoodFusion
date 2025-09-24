@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
   const { socket } = (req as any)
