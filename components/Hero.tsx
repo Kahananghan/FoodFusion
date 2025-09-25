@@ -2,7 +2,12 @@
 
 import Link from 'next/link'
 import { ArrowRight, Sparkles } from 'lucide-react'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 
 export default function Hero() {
   const [isHovered, setIsHovered] = useState(false)
@@ -13,7 +18,7 @@ export default function Hero() {
   }, [])
 
   return (
-    <section className="relative min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 overflow-hidden">
+    <section className="relative min-h-screen bg-gradient-to-br from-orange-100 via-white to-red-100 overflow-hidden">
       {/* Enhanced Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
@@ -46,13 +51,13 @@ export default function Hero() {
             
             <h1 className={`text-5xl lg:text-6xl font-bold text-gray-900 mb-8 leading-tight transform transition-all duration-1000 delay-200 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <span className="block mb-4">Your Favorite Food</span>
-              <span className="text-primary block bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
                 Delivered Fast
               </span>
             </h1>
             
             <p className={`text-xl text-gray-600 mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              Order from <span className="font-semibold text-gray-800">500+ restaurants</span> near you. Hot, fresh meals delivered to your doorstep in 30 minutes or less.
+              Order from <span className="font-semibold text-gray-800">50+ restaurants</span> near you. Hot, fresh meals delivered to your doorstep in 30 minutes or less.
             </p>
             
             <div className={`flex flex-col sm:flex-row gap-4 justify-center lg:justify-start transform transition-all duration-1000 delay-400 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
@@ -71,19 +76,19 @@ export default function Hero() {
                 href="/restaurants" 
                 className="group border-2 border-gray-300 text-gray-700 px-10 py-4 rounded-2xl font-semibold hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-300 flex items-center justify-center backdrop-blur-sm"
               >
-                <span className="mr-2 text-lg">🍽️</span>
+                <Image src="/icons8-dish-100.png" alt="menu" width={30} height={30} className="mr-2" />
                 Browse Restaurants
               </Link>
             </div>
             
             <div className={`flex items-center justify-center lg:justify-start mt-12 space-x-8 transform transition-all duration-1000 delay-500 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <div className="text-center group">
-                <div className="text-3xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">50k+</div>
+                <div className="text-3xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">100+</div>
                 <div className="text-sm text-gray-600 font-medium">Orders Delivered</div>
               </div>
               <div className="w-px h-12 bg-gray-300"></div>
               <div className="text-center group">
-                <div className="text-3xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">500+</div>
+                <div className="text-3xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">50+</div>
                 <div className="text-sm text-gray-600 font-medium">Partner Restaurants</div>
               </div>
               <div className="w-px h-12 bg-gray-300"></div>
@@ -94,112 +99,96 @@ export default function Hero() {
             </div>
           </div>
           
-          {/* Right Content - Food Delivery App Mockup */}
+          {/* Right Content*/}
           <div className={`relative transform transition-all duration-1000 delay-600 ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'}`}>
             <div className="relative z-10">
-              <div className="bg-white rounded-3xl shadow-2xl p-6 group hover:shadow-3xl transition-all duration-500">
+              <Card className="w-full rounded-3xl shadow-2xl p-2 group hover:shadow-3xl transition-all duration-500">
                 {/* Phone Mockup */}
-                <div className="w-full max-w-sm mx-auto bg-gray-900 rounded-3xl p-2">
-                  <div className="bg-white rounded-2xl p-4 h-96 overflow-hidden">
+                <div className="w-full bg-gray-900 rounded-3xl p-2">
+                  <CardContent className="bg-white rounded-2xl p-4 h-96 overflow-hidden">
                     {/* App Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">F</span>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                          <Image src="/icons8-dish-100.png" alt="dish" width={34} height={34} className="object-contain" />
                         </div>
-                        <span className="font-bold text-gray-800">FoodApp</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-xl text-orange-500">FoodFusion</span>
+                        </div>
                       </div>
                       <div className="text-2xl">🛒</div>
                     </div>
-                    
-                    {/* Search Bar */}
-                    <div className="bg-gray-100 rounded-xl p-3 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-gray-400">🔍</span>
-                        <span className="text-gray-500 text-sm">Search restaurants...</span>
-                      </div>
+
+                    {/* Search (Input) */}
+                    <div className="mb-4">
+                      <Input aria-label="Search restaurants" placeholder="Search restaurants..." />
                     </div>
-                    
+
                     {/* Food Categories */}
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-1">
-                          <span className="text-lg">🍕</span>
-                        </div>
-                        <span className="text-xs text-gray-600">Pizza</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-1">
-                          <span className="text-lg">🍔</span>
-                        </div>
-                        <span className="text-xs text-gray-600">Burger</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-1">
-                          <span className="text-lg">🍜</span>
-                        </div>
-                        <span className="text-xs text-gray-600">Asian</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-1">
-                          <span className="text-lg">🌮</span>
-                        </div>
-                        <span className="text-xs text-gray-600">Mexican</span>
+                    <div className="mb-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {[
+                          { key: 'pizza', label: 'Pizza', emoji: '🍕', bg: 'bg-red-100' },
+                          { key: 'burger', label: 'Burger', emoji: '🍔', bg: 'bg-yellow-100' },
+                          { key: 'asian', label: 'Asian', emoji: '🍜', bg: 'bg-green-100' },
+                          { key: 'mexican', label: 'Mexican', emoji: '🌮', bg: 'bg-orange-100' },
+                        ].map((c) => (
+                          <button
+                            key={c.key}
+                            type="button"
+                            className={`flex flex-col items-center justify-center space-y-1 p-2 rounded-xl hover:scale-105 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary ${c.bg}`}
+                            aria-label={c.label}
+                          >
+                            <div className="w-12 h-12 flex items-center justify-center text-lg">
+                              <span>{c.emoji}</span>
+                            </div>
+                            <span className="text-xs text-gray-600">{c.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    
+
                     {/* Restaurant Cards */}
                     <div className="space-y-3">
-                      <div className="bg-gray-50 rounded-xl p-3">
+                      <Card className="bg-gray-50 rounded-xl p-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
                             <span className="text-white">🍕</span>
                           </div>
                           <div className="flex-1">
-                            <div className="font-semibold text-sm">Pizza Palace</div>
+                            <div className="font-semibold text-sm text-black">Pizza Palace</div>
                             <div className="text-xs text-gray-500">⭐ 4.8 • 25-30 min</div>
                           </div>
+                          <Button variant="ghost" size="sm" aria-label="Order Pizza Palace">Order</Button>
                         </div>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-xl p-3">
+                      </Card>
+
+                      <Card className="bg-gray-50 rounded-xl p-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
                             <span className="text-white">🍔</span>
                           </div>
                           <div className="flex-1">
-                            <div className="font-semibold text-sm">Burger House</div>
+                            <div className="font-semibold text-sm text-black">Burger House</div>
                             <div className="text-xs text-gray-500">⭐ 4.6 • 20-25 min</div>
                           </div>
+                          <Button variant="ghost" size="sm" aria-label="Order Burger House">Order</Button>
                         </div>
-                      </div>
+                      </Card>
                     </div>
-                  </div>
+                  </CardContent>
                 </div>
-              </div>
+              </Card>
             </div>
-            
+
             {/* Floating Elements */}
-            <div className="absolute -top-4 -right-4 bg-primary text-white rounded-2xl shadow-xl p-4 animate-bounce">
-              <div className="text-center">
-                <div className="text-2xl mb-1">🚚</div>
-                <div className="text-xs font-bold">Fast Delivery</div>
-              </div>
-            </div>
+            <div className="absolute -top-4 -left-4 h-24 w-24 bg-yellow-500 text-white rounded-2xl shadow-xl p-3 animate-pulse" aria-hidden></div>
+
+            <div className="absolute -top-4 -right-4 h-24 w-24 bg-primary text-white rounded-2xl shadow-xl p-4 animate-bounce" aria-hidden></div>
             
-            <div className="absolute -bottom-4 -left-4 bg-green-500 text-white rounded-2xl shadow-xl p-4 animate-bounce delay-500">
-              <div className="text-center">
-                <div className="text-2xl mb-1">💳</div>
-                <div className="text-xs font-bold">Safe Payment</div>
-              </div>
-            </div>
+            <div className="absolute -bottom-8 -left-4 h-24 w-24 bg-green-500 text-white rounded-2xl shadow-xl p-4 animate-bounce delay-500" aria-hidden></div>
             
-            <div className="absolute top-1/2 -right-8 bg-yellow-500 text-white rounded-2xl shadow-xl p-3 animate-pulse">
-              <div className="text-center">
-                <div className="text-xl mb-1">⭐</div>
-                <div className="text-xs font-bold">Top Rated</div>
-              </div>
-            </div>
+            <div className="absolute -bottom-4 -right-4 h-24 w-24 bg-yellow-500 text-white rounded-2xl shadow-xl p-3 animate-pulse" aria-hidden></div>
           </div>
         </div>
       </div>

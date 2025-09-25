@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 
 const stats = [
-  { number: 50000, label: 'Orders Delivered', suffix: '+' },
-  { number: 1200, label: 'Partner Restaurants', suffix: '+' },
-  { number: 25, label: 'Cities Covered', suffix: '+' },
+  { number: 100, label: 'Orders Delivered', suffix: '+' },
+  { number: 50, label: 'Partner Restaurants', suffix: '+' },
+  { number: 10, label: 'Cities Covered', suffix: '+' },
   { number: 98, label: 'Customer Satisfaction', suffix: '%' }
 ]
 
@@ -22,7 +22,7 @@ export default function Stats() {
           }
           return newCounters
         })
-      }, 50)
+      }, 20)
     })
 
     return () => intervals.forEach(clearInterval)
