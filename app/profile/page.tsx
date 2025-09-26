@@ -99,7 +99,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50/60 via-white to-white py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-100 via-white to-red-100 py-12 px-4">
       <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-3">
         {/* Left column: profile summary */}
         <div className="space-y-6 lg:col-span-1">
