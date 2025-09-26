@@ -214,11 +214,11 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen px-20 bg-gradient-to-br from-orange-50/60 via-white to-orange-100/80 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-20 bg-gradient-to-br from-orange-50/60 via-white to-orange-100/80 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900">
       {restaurant && (
         <>
           {/* Hero Section */}
-          <div className="relative group h-[260px] md:h-[360px] lg:h-[420px] flex items-end justify-center">
+          <div className="relative group h-[220px] sm:h-[260px] md:h-[360px] lg:h-[420px] flex items-end justify-center">
             <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-inner">
               <Image
                   src={restaurant.featured_image || ''}
@@ -235,39 +235,44 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
               <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.45),rgba(0,0,0,0.0)_40%)]" />
             </div>
             {/* mobile overlay title for stronger immediate impression */}
-            <div className="absolute left-1/2 top-6 -translate-x-1/2 md:hidden text-center px-4">
-              <h2 className="text-xl font-bold text-white drop-shadow-lg">{restaurant.name}</h2>
-              <p className="text-sm text-white/80 mt-1">{restaurant.cuisines}</p>
+            <div className="absolute left-1/2 top-4 -translate-x-1/2 md:hidden text-center px-3">
+              <h2 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg truncate max-w-[90vw]">{restaurant.name}</h2>
+              <p className="text-xs sm:text-sm text-white/80 mt-1 truncate max-w-[90vw]">{restaurant.cuisines}</p>
             </div>
 
-            <Card className="absolute left-4 md:left-8 lg:left-8 bottom-4 translate-y-1/2 md:translate-y-2 w-[95vw] md:w-[72%] lg:w-[65%] max-w-5xl shadow-3xl border-0 bg-transparent backdrop-blur-none transition-transform duration-400 pointer-events-none">
+            <Card className="absolute left-3 sm:left-4 md:left-8 lg:left-8 bottom-4 translate-y-1/2 md:translate-y-2 w-[94vw] sm:w-[90vw] md:w-[72%] lg:w-[65%] max-w-5xl shadow-3xl border-0 bg-transparent backdrop-blur-none transition-transform duration-400 pointer-events-none">
               <CardContent className="py-6 px-4 md:px-8 flex flex-col md:flex-row md:items-center gap-4 pointer-events-auto">
                 <div className="hidden md:flex items-center justify-center w-20 h-20 rounded-full overflow-hidden ring-2 ring-white/30 flex-shrink-0">
                   <Image src={restaurant.featured_image || ''} alt={`${restaurant.name} thumbnail`} width={80} height={80} className="object-cover w-full h-full" />
                 </div>
                 <div className="flex-1 text-white">
-                  <h1 className="text-3xl md:text-3xl lg:text-4xl font-extrabold mb-1 tracking-tight drop-shadow-lg">{restaurant.name}</h1>
-                  <div className="flex items-center gap-3 mb-2 text-sm text-white/90">
-                    <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-md">
-                      <Star className="h-4 w-4 text-yellow-400" />
-                      <span className="font-medium">{restaurant.user_rating.aggregate_rating}</span>
+                  {/* Hide the large title on small screens - use the mobile overlay title instead */}
+                  <h1 className="hidden md:block text-3xl md:text-3xl lg:text-4xl font-extrabold mb-1 tracking-tight drop-shadow-lg">{restaurant.name}</h1>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 mb-1.5 text-white/90">
+                    <div className="flex items-center gap-1 bg-white/10 px-1 py-0.5 rounded-md self-start sm:self-auto">
+                      <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
+                      <span className="font-medium text-xs sm:text-sm">{restaurant.user_rating.aggregate_rating}</span>
                     </div>
-                    <span className="text-white/80">{restaurant.user_rating.rating_text}</span>
-                    <span className="text-white/40">•</span>
-                    <span className="text-white/80">{restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}</span>
+                    <div className="flex items-center flex-wrap gap-1 text-xs sm:text-sm text-white/80 truncate">
+                      <span className="truncate max-w-[55vw] sm:max-w-[40vw]">{restaurant.user_rating.rating_text}</span>
+                      <span className="hidden sm:inline text-white/40">•</span>
+                      <span className="truncate max-w-[45vw] sm:max-w-[30vw]">{restaurant.location.city}{restaurant.location.state ? `, ${restaurant.location.state}` : ''}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {restaurant.cuisines?.split(',').slice(0,3).map((c,i) => (
-                      <span key={i} className="text-[13px] px-2 py-1 bg-white/10 text-white rounded-md">{c.trim()}</span>
-                    ))}
-                    <span className="ml-2 text-sm text-white/70">• Avg ₹{restaurant.average_cost_for_two}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 mb-2">
+                    <div className="hidden md:block flex flex-wrap gap-1">
+                      {restaurant.cuisines?.split(',').slice(0,3).map((c,i) => (
+                        <span key={i} className="text-[10px] sm:text-[13px] px-2 py-0.5 sm:py-1 bg-white/10 text-white rounded-md truncate">{c.trim()}</span>
+                      ))}
+                    </div>
+                    <span className="ml-0 sm:ml-2 text-[11px] sm:text-sm text-white/70">• Avg ₹{restaurant.average_cost_for_two}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div id="menu" className="max-w-7xl mx-auto px-4 pt-24 pb-12 grid lg:grid-cols-3 gap-10">
+          <div id="menu" className="max-w-7xl mx-auto px-0 sm:px-4 pt-20 sm:pt-24 pb-12 grid lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Menu Section */}
             <div className="lg:col-span-2">
               <div className="flex items-center mb-8">
@@ -276,8 +281,8 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
               </div>
               <div className="space-y-8">
                 {menuItems.map((item) => (
-                  <Card key={item.id} className="flex flex-col md:flex-row items-stretch bg-white/80 dark:bg-neutral-900/80 border-0 shadow-lg backdrop-blur-xl overflow-hidden">
-                    <div className="relative w-full md:w-56 h-40 md:h-auto flex-shrink-0">
+                  <Card key={item.id} className="flex flex-col sm:flex-row items-stretch bg-white/80 dark:bg-neutral-900/80 border-0 shadow-lg backdrop-blur-xl overflow-hidden">
+                    <div className="relative w-full sm:w-48 md:w-56 h-40 sm:h-36 md:h-auto flex-shrink-0">
                       <Image
                         src={item.image}
                         alt={item.name}
@@ -300,7 +305,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         </div>
                         <p className="text-neutral-600 dark:text-neutral-300 mb-3 leading-relaxed">{item.description}</p>
                       </div>
-                      <div className="flex items-center justify-between mt-4">
+                      <div className="flex items-center justify-between mt-4 gap-3">
                         <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
                         {cart[item.id] > 0 ? (
                           <div className="flex items-center space-x-3 bg-orange-50/60 dark:bg-orange-900/30 rounded-xl p-2">
@@ -327,7 +332,7 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
                         ) : (
                           <Button
                             type="button"
-                            className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-xl"
+                            className="px-4 sm:px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base"
                             onClick={() => addToCart(item.id)}
                           >
                             Add to Cart
@@ -341,9 +346,9 @@ export default function RestaurantPage({ params }: { params: { id: string } }) {
             </div>
 
             {/* Cart Section */}
-            <div className="lg:col-span-1 mt-16">
+            <div className="lg:col-span-1 mt-8 lg:mt-16">
               {getTotalItems() > 0 && (
-                <Card className="shadow-2xl border-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl sticky top-24 rounded-2xl">
+                <Card className="shadow-2xl border-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl rounded-2xl w-full lg:sticky lg:top-24">
                   <CardContent className="p-0">
                     <div className="px-8 pt-8 pb-4">
                       <div className="flex items-center mb-4">
