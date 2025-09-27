@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'FoodFusion - Delivery Panel',
+  title: 'FoodFusion | Delivery',
   description: 'Delivery partner dashboard: view available orders, update delivery status and manage assigned orders.',
 }
 

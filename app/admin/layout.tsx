@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import './admin.css'
 
 export const metadata: Metadata = {
-  title: 'FoodFusion - Admin Panel',
+  title: 'FoodFusion | Admin',
   description: 'Admin dashboard for managing restaurants, orders, users and stats.',
 }
 
