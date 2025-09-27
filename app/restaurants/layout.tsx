@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'FoodFusion - Restaurants',
+  title: 'FoodFusion | Restaurants',
   description: 'Browse restaurants, view menus and place orders near you.',
 }
 
