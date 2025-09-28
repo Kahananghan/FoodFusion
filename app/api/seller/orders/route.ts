@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
 import Restaurant from '@/models/Restaurant'
+import User from '@/models/User'
 
 export async function GET(request: NextRequest) {
   try {
