@@ -50,6 +50,7 @@ interface DeliveryOrder {
 export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([])
+  const [acceptingIds, setAcceptingIds] = useState<string[]>([])
   const [myOrders, setMyOrders] = useState<DeliveryOrder[]>([])
   const [deliveryHistory, setDeliveryHistory] = useState<DeliveryOrder[]>([])
   // track all unique order IDs that have been exposed in the available list (offer exposures)
@@ -99,7 +100,7 @@ export default function DeliveryDashboard() {
 
   const fetchAvailableOrders = async () => {
     try {
-      const res = await fetch('/api/delivery/available-orders')
+      const res = await fetch(`/api/delivery/available-orders?ts=${Date.now()}`)
       const data = await res.json()
       if (res.ok) {
   setAvailableOrders(data.orders)
@@ -146,20 +147,30 @@ export default function DeliveryDashboard() {
   }
 
   const handleAcceptOrder = async (orderId: string) => {
+    // optimistic UI: remove order locally immediately and mark as pending
     try {
+      setAvailableOrders(prev => prev.filter(o => o._id !== orderId))
+      setAcceptingIds(prev => [...prev, orderId])
+
       const res = await fetch(`/api/delivery/accept-order/${orderId}`, {
         method: 'POST'
       })
 
       if (res.ok) {
         toast.success('Order accepted successfully!')
-        fetchAvailableOrders()
+        // refresh my orders to pick up the new assignment
         fetchMyOrders()
       } else {
         toast.error('Failed to accept order')
+        // rollback: re-fetch available orders to restore state
+        fetchAvailableOrders()
       }
     } catch (error) {
       toast.error('Something went wrong')
+      // rollback on network failure
+      fetchAvailableOrders()
+    } finally {
+      setAcceptingIds(prev => prev.filter(id => id !== orderId))
     }
   }
 
@@ -499,16 +510,16 @@ export default function DeliveryDashboard() {
                               </div>
                               {/* Accept side (on md) */}
                               <div className="md:w-40 border-t md:border-t-0 md:border-l flex items-center justify-center bg-indigo-50/40 dark:bg-indigo-950/20 p-3">
-                                <button onClick={()=>handleAcceptOrder(order._id)} className="w-full h-10 text-[11px] font-medium tracking-wide bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2 rounded-sm">
-                                  Accept
+                                <button disabled={acceptingIds.includes(order._id)} onClick={()=>handleAcceptOrder(order._id)} className="w-full h-10 text-[11px] font-medium tracking-wide bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2 rounded-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                  {acceptingIds.includes(order._id) ? 'Accepting...' : 'Accept'}
                                   <svg className="h-3.5 w-3.5 opacity-80 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                                 </button>
                               </div>
                             </div>
                             {/* Mobile accept full width */}
                             <div className="md:hidden border-t">
-                              <button onClick={()=>handleAcceptOrder(order._id)} className="w-full h-9 text-[11px] font-medium tracking-wide bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2">
-                                Accept Order
+                              <button disabled={acceptingIds.includes(order._id)} onClick={()=>handleAcceptOrder(order._id)} className="w-full h-9 text-[11px] font-medium tracking-wide bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                                {acceptingIds.includes(order._id) ? 'Accepting...' : 'Accept Order'}
                                 <svg className="h-3.5 w-3.5 opacity-80 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                               </button>
                             </div>
