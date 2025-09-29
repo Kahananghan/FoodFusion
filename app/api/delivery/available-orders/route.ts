@@ -13,8 +13,9 @@ export async function GET(request: NextRequest) {
         $or: [
           { deliveryPersonId: { $exists: false } },
           { deliveryPersonId: null },
-          { deliveryPersonId: '' },
-          { deliveryPersonId: 'null' }
+          // Use $expr for literal string comparisons to avoid Mongoose casting to ObjectId
+          { $expr: { $eq: ["$deliveryPersonId", ""] } },
+          { $expr: { $eq: ["$deliveryPersonId", "null"] } }
         ]
       })
   .populate({ path: 'user', model: User, select: 'name phone addresses' })
