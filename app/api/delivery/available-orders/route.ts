@@ -10,7 +10,12 @@ export async function GET(request: NextRequest) {
     
       const orders = await Order.find({ 
         status: { $in: ['ready'] },
-        $or: [ { deliveryPersonId: { $exists: false } }]
+        $or: [
+          { deliveryPersonId: { $exists: false } },
+          { deliveryPersonId: null },
+          { deliveryPersonId: '' },
+          { deliveryPersonId: 'null' }
+        ]
       })
   .populate({ path: 'user', model: User, select: 'name phone addresses' })
       .sort({ createdAt: -1 })
