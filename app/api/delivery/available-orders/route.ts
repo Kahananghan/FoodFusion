@@ -8,19 +8,28 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect()
     
-      const orders = await Order.find({ 
-        status: { $in: ['ready'] },
-        $or: [
+      // Use aggregation to avoid Mongoose trying to cast string values to ObjectId
+      const orders = await Order.aggregate([
+        { $match: { status: { $in: ['ready'] } } },
+        { $match: { $or: [
           { deliveryPersonId: { $exists: false } },
           { deliveryPersonId: null },
-          // Use $expr for literal string comparisons to avoid Mongoose casting to ObjectId
-          { $expr: { $eq: ["$deliveryPersonId", ""] } },
-          { $expr: { $eq: ["$deliveryPersonId", "null"] } }
-        ]
-      })
-  .populate({ path: 'user', model: User, select: 'name phone addresses' })
-      .sort({ createdAt: -1 })
-      .limit(20)
+          { $and: [
+            { $expr: { $eq: [ { $type: "$deliveryPersonId" }, "string" ] } },
+            { $expr: { $in: [ "$deliveryPersonId", ["", "null"] ] } }
+          ] }
+        ] } },
+        { $sort: { createdAt: -1 } },
+        { $limit: 20 },
+        // populate user using $lookup to avoid Mongoose populate casting
+        { $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'user'
+        } },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } }
+      ])
     
     // Transform orders for delivery interface and populate restaurant details
     const transformedOrders = await Promise.all(orders.map(async order => {
