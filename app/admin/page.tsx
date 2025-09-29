@@ -19,7 +19,6 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/components/CustomToaster'
-import './admin.css'
 
 interface User {
   _id: string

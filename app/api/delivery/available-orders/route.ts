@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import jwt from 'jsonwebtoken'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
 import Restaurant from '@/models/Restaurant'
@@ -7,29 +8,34 @@ import User from '@/models/User'
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
-    
-      // Use aggregation to avoid Mongoose trying to cast string values to ObjectId
-      const orders = await Order.aggregate([
-        { $match: { status: { $in: ['ready'] } } },
-        { $match: { $or: [
-          { deliveryPersonId: { $exists: false } },
-          { deliveryPersonId: null },
-          { $and: [
-            { $expr: { $eq: [ { $type: "$deliveryPersonId" }, "string" ] } },
-            { $expr: { $in: [ "$deliveryPersonId", ["", "null"] ] } }
-          ] }
-        ] } },
-        { $sort: { createdAt: -1 } },
-        { $limit: 20 },
-        // populate user using $lookup to avoid Mongoose populate casting
-        { $lookup: {
-            from: 'users',
-            localField: 'user',
-            foreignField: '_id',
-            as: 'user'
-        } },
-        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } }
-      ])
+
+    // Build aggregation pipeline to return orders with status 'ready' and no deliveryPersonId (unassigned)
+    const unassignedOrEmpty = {
+      $or: [
+        { deliveryPersonId: { $exists: false } },
+        { deliveryPersonId: null },
+        { $and: [
+          { $expr: { $eq: [ { $type: "$deliveryPersonId" }, "string" ] } },
+          { $expr: { $in: [ "$deliveryPersonId", ["", "null"] ] } }
+        ] }
+      ]
+    }
+
+    const matchClause: any = { $and: [ { status: { $in: ['ready'] } }, unassignedOrEmpty ] }
+
+    const orders = await Order.aggregate([
+      { $match: matchClause },
+      { $sort: { createdAt: -1 } },
+      { $limit: 20 },
+      // populate user using $lookup to avoid Mongoose populate casting
+      { $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user'
+      } },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } }
+    ])
     
     // Transform orders for delivery interface and populate restaurant details
     const transformedOrders = await Promise.all(orders.map(async order => {
