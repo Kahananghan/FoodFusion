@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Find orders assigned to this delivery person
   // @ts-ignore suppress complex mongoose overload typing
   const orders = await Order.find({ deliveryPersonId: decoded.userId })
-      .populate('user', 'name phone addresses')
+    .populate({ path: 'user', model: User, select: 'name phone addresses' })
       .sort({ createdAt: -1 })
       .limit(20)
     

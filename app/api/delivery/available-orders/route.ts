@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         status: { $in: ['ready'] },
         $or: [ { deliveryPersonId: { $exists: false } }, { deliveryPersonId: null } ]
       })
-      .populate('user', 'name phone addresses')
+  .populate({ path: 'user', model: User, select: 'name phone addresses' })
       .sort({ createdAt: -1 })
       .limit(20)
     
