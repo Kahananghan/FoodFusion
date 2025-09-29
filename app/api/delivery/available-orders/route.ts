@@ -8,12 +8,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect()
     
-    // Find orders that are ready for delivery (status: 'ready') and not assigned to any delivery person
-  // @ts-ignore simplify typing for this query
-  const orders = await Order.find({ 
-      status: 'ready',
-      deliveryPersonId: { $exists: false }
-    })
+      const orders = await Order.find({ 
+        status: { $in: ['ready'] },
+        $or: [ { deliveryPersonId: { $exists: false } }, { deliveryPersonId: null } ]
+      })
       .populate('user', 'name phone addresses')
       .sort({ createdAt: -1 })
       .limit(20)
