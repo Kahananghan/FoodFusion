@@ -41,7 +41,9 @@ export const SellerSidebar = ({ active, onChange, user, onLogout }: SellerSideba
   return (
     <div className="flex h-screen flex-col">
       <div className="flex items-center gap-2 h-14 px-3 border-b bg-gradient-to-r from-green-600 via-green-500/90 to-green-400 text-white shadow-sm">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/20 font-bold text-sm backdrop-blur">FF</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/40 backdrop-blur">
+          <img src="/dish-logo-green.png" alt="FoodFusion seller Logo" className="h-10 w-10" />
+        </div>
         {open && (
           <div className="flex flex-col justify-between">
             <span className="font-bold tracking-wide text-lg">FoodFusion</span>

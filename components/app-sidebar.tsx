@@ -43,7 +43,9 @@ export const AppSidebar = ({ active, onChange, user, onLogout }: AppSidebarProps
   return (
     <div className="flex h-screen flex-col">
       <div className="flex items-center gap-2 h-14 px-3 border-b bg-gradient-to-r from-orange-500 via-orange-500/90 to-orange-400 text-white shadow-sm">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/20 font-bold text-sm backdrop-blur">FF</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/60 backdrop-blur">
+          <img src="/icons8-dish-100.png" alt="FoodFusion Admin Logo" className="h-10 w-10" />
+        </div>
         {open && 
            <div className='flex flex-col justify-between'>
             <span className="font-bold tracking-wide text-lg">FoodFusion </span>
