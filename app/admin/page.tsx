@@ -491,6 +491,88 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDownloadReport = () => {
+    try {
+      // Helper function to format CSV field
+      const formatCsvField: (value: any) => string = (value: any): string => {
+        if (value === null || value === undefined) {
+          return '""'
+        }
+        const stringValue = String(value)
+        // Always quote all fields to ensure consistent column alignment
+        return `"${stringValue.replace(/"/g, '""')}"`
+      }
+
+      const total = stats.totalRevenue || 0
+      const platformFees = Math.round(total * 0.05)
+      const deliveryShare = Math.round(total * 0.30)
+      const other = Math.max(0, total - (platformFees + deliveryShare))
+
+      // Generate report data with consistent CSV formatting
+      const csvLines = []
+      
+      // Header
+      csvLines.push(formatCsvField('FoodFusion Revenue Report'))
+      csvLines.push(`${formatCsvField('Generated on')},${formatCsvField(new Date().toLocaleString())}`)
+      csvLines.push('')
+      
+      // Summary Section
+      csvLines.push(formatCsvField('SUMMARY SECTION'))
+      csvLines.push(`${formatCsvField('Metric')},${formatCsvField('Value')}`)
+      csvLines.push(`${formatCsvField('Total Revenue (Rs)')},${formatCsvField(total)}`)
+      csvLines.push(`${formatCsvField('Platform Fees 5% (Rs)')},${formatCsvField(platformFees)}`)
+      csvLines.push(`${formatCsvField('Delivery Share 30% (Rs)')},${formatCsvField(deliveryShare)}`)
+      csvLines.push(`${formatCsvField('Other Revenue (Rs)')},${formatCsvField(other)}`)
+      csvLines.push(`${formatCsvField('Total Users')},${formatCsvField(stats.totalUsers)}`)
+      csvLines.push(`${formatCsvField('Total Restaurants')},${formatCsvField(stats.totalRestaurants)}`)
+      csvLines.push(`${formatCsvField('Total Orders')},${formatCsvField(stats.totalOrders)}`)
+      csvLines.push(`${formatCsvField('Avg Order Value (Rs)')},${formatCsvField(stats.avgOrderValue)}`)
+      csvLines.push(`${formatCsvField('Completion Rate (%)')},${formatCsvField(stats.completionRate)}`)
+      csvLines.push(`${formatCsvField('Active Delivery Partners')},${formatCsvField(stats.activeDeliveryPartners)}`)
+      csvLines.push('')
+      
+      // Restaurant Performance
+      csvLines.push(formatCsvField('RESTAURANT PERFORMANCE'))
+      csvLines.push(`${formatCsvField('Restaurant Name')},${formatCsvField('Owner Name')},${formatCsvField('Status')},${formatCsvField('Total Orders')},${formatCsvField('Revenue (Rs)')}`)
+      restaurants.forEach(r => {
+        csvLines.push(
+          `${formatCsvField(r.name)},${formatCsvField(r.owner?.name || 'Unknown')},${formatCsvField(r.status)},${formatCsvField(r.totalOrders || 0)},${formatCsvField(r.revenue || 0)}`
+        )
+      })
+      csvLines.push('')
+      
+      // Recent Orders
+      csvLines.push(formatCsvField('RECENT ORDERS (LAST 100)'))
+      csvLines.push(`${formatCsvField('Order Number')},${formatCsvField('Customer Name')},${formatCsvField('Restaurant Name')},${formatCsvField('Order Status')},${formatCsvField('Total Amount (Rs)')},${formatCsvField('Order Date')}`)
+      orders.slice(0, 100).forEach(o => {
+        csvLines.push(
+          `${formatCsvField(o.orderNumber)},${formatCsvField(o.customer?.name || 'Unknown')},${formatCsvField(o.restaurant?.name || 'Unknown')},${formatCsvField(o.status)},${formatCsvField(o.total?.toFixed(2) || '0.00')},${formatCsvField(new Date(o.createdAt).toLocaleDateString())}`
+        )
+      })
+
+      // Create CSV content with BOM for Excel compatibility
+      const BOM = '\uFEFF'
+      const csvContent = BOM + csvLines.join('\r\n')
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `FoodFusion-Revenue-Report-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('Revenue report downloaded successfully!')
+    } catch (error) {
+      console.error('Error generating report:', error)
+      toast.error('Failed to generate report')
+    }
+  }
+
   // helper components -------------------------------------------------------
   const StatusBadge = ({ children, color }: { children: React.ReactNode; color: string }) => (
     <Badge
@@ -790,7 +872,7 @@ export default function AdminDashboard() {
                     )
                   })()}
                   <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white shadow" aria-label="Download revenue report">Download Report</Button>
+                    <Button size="sm" className="flex-1 bg-orange-600 hover:bg-orange-700 text-white shadow" aria-label="Download revenue report" onClick={handleDownloadReport}>Download Report</Button>
                     <Button size="sm" variant="outline" className="flex-1 border-orange-300/60 hover:text-orange-700 text-orange-700 hover:bg-orange-50" aria-label="Export detailed analytics" onClick={() => setActiveTab('orders')}>Detailed View</Button>
                   </div>
                 </CardContent>
