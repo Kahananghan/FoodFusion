@@ -1,6 +1,7 @@
-'use client'
+"use client"
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Star, MapPin, Search, RefreshCcw } from 'lucide-react'
@@ -44,11 +45,21 @@ export default function RestaurantsPage() {
   })
   const [searchInput, setSearchInput] = useState('')
 
+  const searchParams = useSearchParams()
+
+  // Initialize filters from URL search params on mount and whenever params change
   useEffect(() => {
+    const initialCity = searchParams?.get('city') || ''
+    const initialCuisine = searchParams?.get('cuisine') || ''
+    const initialSearch = searchParams?.get('search') || ''
+    setFilters({ city: initialCity, cuisine: initialCuisine, search: initialSearch })
+    setSearchInput(initialSearch)
+    // fetch supporting data and restaurants
     fetchCities()
     fetchCuisines()
-    fetchRestaurants()
-  }, [])
+    // fetchRestaurants will be called by the filters effect
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   useEffect(() => {
     fetchRestaurants()

@@ -119,10 +119,14 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', handler)
   }, [searchOpen])
 
-  const executeSearch = (term: string) => {
+  const executeSearch = (term: string, type: 'restaurant' | 'cuisine' | 'recent' | 'quick' = 'restaurant') => {
     const q = term.trim(); if (!q) return
     persistRecent(q)
-    router.push(`/restaurants?search=${encodeURIComponent(q)}`)
+    if (type === 'cuisine') {
+      router.push(`/restaurants?cuisine=${encodeURIComponent(q)}`)
+    } else {
+      router.push(`/restaurants?search=${encodeURIComponent(q)}`)
+    }
     setSearchOpen(false); setSearchQuery(''); setSuggestions([])
   }
 
@@ -283,8 +287,13 @@ export default function Navbar() {
                     if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(0, i-1)) }
                     if (e.key === 'Enter') {
                       if (highlightedIndex >=0) {
-                        const source = suggestions.length ? suggestions : recentSearches.map(r => ({ id: r, name: r, type: 'c' as const }))
-                        const item = source[highlightedIndex]; if (item) { executeSearch(item.name); return }
+                        if (suggestions.length) {
+                          const item = suggestions[highlightedIndex]
+                          if (item) { executeSearch(item.name, item.type); return }
+                        } else {
+                          const term = recentSearches[highlightedIndex]
+                          if (term) { executeSearch(term, 'recent'); return }
+                        }
                       }
                       if (searchQuery.trim()) executeSearch(searchQuery)
                     }
@@ -318,7 +327,7 @@ export default function Navbar() {
                     <li className="px-2 pt-2 text-[11px] font-semibold tracking-wide uppercase text-gray-500 dark:text-neutral-400">Recent</li>
                   )}
                   {searchQuery.trim().length < 2 && recentSearches.map((term, idx) => (
-                    <li key={term+idx} role="option" aria-selected={highlightedIndex===idx} onMouseEnter={() => setHighlightedIndex(idx)} onMouseDown={e => { e.preventDefault(); executeSearch(term) }}
+                    <li key={term+idx} role="option" aria-selected={highlightedIndex===idx} onMouseEnter={() => setHighlightedIndex(idx)} onMouseDown={e => { e.preventDefault(); executeSearch(term, 'recent') }}
                       className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer text-sm transition-colors border border-transparent ${highlightedIndex===idx? 'bg-orange-50 dark:bg-neutral-700/40 border-orange-200/70' : 'hover:bg-orange-50/70 dark:hover:bg-neutral-700/30'}`}> 
                       <span className="h-7 w-7 rounded-md bg-orange-100 text-orange-600 flex items-center justify-center"><History className="h-4 w-4" /></span>
                       <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -331,7 +340,7 @@ export default function Navbar() {
                     <li className="px-2 pt-2 text-[11px] font-semibold tracking-wide uppercase text-gray-500 dark:text-neutral-400 sticky top-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur rounded-t">Results</li>
                   )}
                   {searchQuery.trim().length>=2 && suggestions.map((s, idx) => (
-                    <li key={s.type+s.id} role="option" aria-selected={highlightedIndex===idx} onMouseEnter={() => setHighlightedIndex(idx)} onMouseDown={e => { e.preventDefault(); executeSearch(s.name) }}
+                    <li key={s.type+s.id} role="option" aria-selected={highlightedIndex===idx} onMouseEnter={() => setHighlightedIndex(idx)} onMouseDown={e => { e.preventDefault(); executeSearch(s.name, s.type) }}
                       className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer text-sm transition-colors border border-transparent ${highlightedIndex===idx? 'bg-orange-50 dark:bg-neutral-700/40 border-orange-200/70' : 'hover:bg-orange-50/70 dark:hover:bg-neutral-700/30'}`}> 
                       <span className="h-7 w-7 rounded-md bg-orange-100 text-orange-600 flex items-center justify-center">{s.type==='restaurant'? <Store className="h-4 w-4" /> : <Search className="h-4 w-4" />}</span>
                       <div className="flex-1 min-w-0">
@@ -352,8 +361,8 @@ export default function Navbar() {
               {/* Quick Picks */}
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">
-                  {['Pizza','Burger','Healthy','Chinese','Desserts','Biryani','Pasta','Salad'].map(term => (
-                    <button key={term} onClick={() => executeSearch(term)} className="px-3 py-1.5 rounded-full bg-orange-100/70 text-orange-700 hover:bg-orange-200/70 text-[12px] font-medium transition dark:bg-neutral-700/60 dark:text-neutral-200 dark:hover:bg-neutral-600">
+          {['Pizza','Burger','Healthy','Chinese','Desserts','Biryani','Pasta','Salad'].map(term => (
+            <button key={term} onClick={() => executeSearch(term, 'quick')} className="px-3 py-1.5 rounded-full bg-orange-100/70 text-orange-700 hover:bg-orange-200/70 text-[12px] font-medium transition dark:bg-neutral-700/60 dark:text-neutral-200 dark:hover:bg-neutral-600">
                       {term}
                     </button>
                   ))}
@@ -362,7 +371,7 @@ export default function Navbar() {
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-orange-100/60 dark:border-neutral-700/60">
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-neutral-400 mr-2">Recent:</span>
                     {recentSearches.slice(0,6).map(r => (
-                      <button key={r} onClick={() => executeSearch(r)} className="px-2.5 py-1 rounded bg-gray-100 hover:bg-gray-200 text-[11px] text-gray-700 dark:bg-neutral-700 dark:hover:bg-neutral-600 dark:text-neutral-200">{r}</button>
+                      <button key={r} onClick={() => executeSearch(r, 'recent')} className="px-2.5 py-1 rounded bg-gray-100 hover:bg-gray-200 text-[11px] text-gray-700 dark:bg-neutral-700 dark:hover:bg-neutral-600 dark:text-neutral-200">{r}</button>
                     ))}
                     <button onClick={() => { setRecentSearches([]); try { localStorage.removeItem('recentSearches') } catch {} }} className="ml-auto text-[10px] uppercase tracking-wide text-orange-600 hover:underline">Clear</button>
                   </div>
