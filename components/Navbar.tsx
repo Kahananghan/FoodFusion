@@ -129,7 +129,7 @@ export default function Navbar() {
   return (
     <>
       {/* Top Bar */}
-      <div className="bg-gray-900 text-white py-2 hidden md:block">
+      {/* <div className="bg-gray-900 text-white py-2 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center text-sm">
             <div className="flex items-center space-x-6">
@@ -145,7 +145,7 @@ export default function Navbar() {
             <div className="text-primary font-medium">Free delivery on orders over ₹500!</div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Navbar */}
       <nav className="bg-white shadow-lg sticky top-0 z-50 overflow-x-clip">
