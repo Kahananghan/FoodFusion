@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Lock, Phone, MapPin } from 'lucide-react'
+import { User, Mail, Lock, Phone, MapPin, Eye, EyeOff } from 'lucide-react'
 import { toast } from '@/components/CustomToaster'
 
 export default function Register() {
@@ -21,10 +21,29 @@ export default function Register() {
     }
   })
   const [loading, setLoading] = useState(false)
+  const [passwordTouched, setPasswordTouched] = useState(false)
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // client-side validation
+    const pwd = formData.password || ''
+    const failed = validatePassword(pwd)
+    if (failed.length > 0) {
+      toast.error('Password does not meet requirements')
+      setPasswordTouched(true)
+      return
+    }
+    // Phone validation (if provided) - must be 10 digits
+    const phoneVal = (formData.phone || '')
+    if (phoneVal && !/^\d{10}$/.test(phoneVal)) {
+      toast.error('Phone number must be 10 digits')
+      setPhoneTouched(true)
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -48,6 +67,20 @@ export default function Register() {
       setLoading(false)
     }
   }
+
+  const passwordRules = useMemo(() => ([
+    { id: 'length', label: 'At least 8 characters', test: (s: string) => s.length >= 8 },
+    { id: 'upper', label: 'One uppercase letter', test: (s: string) => /[A-Z]/.test(s) },
+    { id: 'lower', label: 'One lowercase letter', test: (s: string) => /[a-z]/.test(s) },
+    { id: 'number', label: 'One number', test: (s: string) => /[0-9]/.test(s) },
+    { id: 'special', label: 'One special character (!@#$...)', test: (s: string) => /[!@#$%^&*(),.?":{}|<>]/.test(s) }
+  ]), [])
+
+  const validatePassword = (pwd: string) => {
+    return passwordRules.filter(r => !r.test(pwd)).map(r => r.label)
+  }
+
+  const passwordErrors = validatePassword(formData.password || '')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 py-12 px-4">
@@ -102,14 +135,39 @@ export default function Register() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter your password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, password: e.target.value }); setPasswordTouched(true) }}
                 />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
+              {/* Show only remaining (unmet) password rules after the user touched the field */}
+              {passwordTouched && (() => {
+                const remaining = passwordRules.filter(r => !r.test(formData.password || ''))
+                if (remaining.length === 0) return null
+                return (
+                  <div className="mt-2 text-sm">
+                    <ul className="space-y-1">
+                      {remaining.map(rule => (
+                        <li key={rule.id} className="flex items-center gap-2 text-red-600">
+                          <span className="w-4 h-4 rounded-full flex items-center justify-center border border-red-300 bg-red-50" />
+                          <span className="text-xs">{rule.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
             </div>
 
             <div>
@@ -120,12 +178,18 @@ export default function Register() {
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  pattern="\d*"
+                  maxLength={10}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter your phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setPhoneTouched(true) }}
                 />
               </div>
+              {phoneTouched && formData.phone && !/^\d{10}$/.test(formData.phone) && (
+                <p className="text-xs text-red-600 mt-2">Phone number must be exactly 10 digits.</p>
+              )}
             </div>
           </div>
 

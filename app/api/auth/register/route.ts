@@ -15,6 +15,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User already exists' }, { status: 400 })
     }
     
+    // Validate password server-side
+    const pwd = password || ''
+    const pwdValid = pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+    if (!pwdValid) {
+      return NextResponse.json({ error: 'Password does not meet complexity requirements' }, { status: 400 })
+    }
+
+    // Validate phone server-side (if provided)
+    const phoneStr = phone ? String(phone) : ''
+    if (phoneStr && !/^\d{10}$/.test(phoneStr)) {
+      return NextResponse.json({ error: 'Phone number must be 10 digits' }, { status: 400 })
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
     
