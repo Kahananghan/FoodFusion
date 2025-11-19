@@ -1353,9 +1353,6 @@ export default function AdminDashboard() {
                     <TableCell>
                       <div className="space-y-0.5">
                         <p className="font-medium leading-none">{partner.name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" /> {partner.location ? 'Location Available' : 'Location Unknown'}
-                        </p>
                       </div>
                     </TableCell>
                     <TableCell>
