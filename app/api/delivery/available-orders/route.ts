@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         ) : null,
         status: order.status,
         estimatedDeliveryTime: order.estimatedDeliveryTime,
-        distance: 2.5, // Mock distance
+        distance: 2.5,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt
       }
