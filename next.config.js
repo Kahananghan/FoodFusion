@@ -18,6 +18,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'unsplash.com', pathname: '/**' },
       { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' },
       { protocol: 'https', hostname: 'b.zmtcdn.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'dreamfestiva.com', pathname: '/**' },
       // iStock external images
       { protocol: 'https', hostname: 'media.istockphoto.com', pathname: '/**' },
       // Google user content (keep existing explicit entries as well)
