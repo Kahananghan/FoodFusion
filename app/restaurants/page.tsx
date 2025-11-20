@@ -234,10 +234,10 @@ export default function RestaurantsPage() {
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-3 left-3 flex gap-2">
-                      <Badge variant="secondary" className="flex items-center gap-1 bg-white text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 border border-orange-100 dark:border-neutral-700">
+                      {/* <Badge variant="secondary" className="flex items-center gap-1 bg-white text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 border border-orange-100 dark:border-neutral-700">
                         <Star className="h-3.5 w-3.5 text-yellow-500" />
                         <span className="font-medium text-xs">{r.user_rating.aggregate_rating}</span>
-                      </Badge>
+                      </Badge> */}
                       {r.has_online_delivery === 1 && (
                         <Badge className="bg-green-500 text-white border-transparent">Delivery</Badge>
                       )}
